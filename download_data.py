@@ -6,10 +6,10 @@ a devkit that includes class labels for training images and bounding boxes for a
 
 import ssl
 import wget
-from utils import query_yes_no
 
+# Run the following when run as the main module
+if __name__ == '__main__':
 
-def download_data():
     # Ignore ssl certification (prevent error for some users)
     ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -22,10 +22,4 @@ def download_data():
     print('\nDownloading devkit (image labels and bounding boxes)...')
     wget.download('https://ai.stanford.edu/~jkrause/cars/car_devkit.tgz')
 
-
-# Run the following when run as the main module
-if __name__ == '__main__':
-
-    # Ask user if data needs to be downloaded
-    if query_yes_no('Download all data?:', default='no') == 'yes':
-        download_data()
+    print('Done downloading!')

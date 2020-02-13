@@ -1,3 +1,4 @@
+torchvision
 opencv-python
 tqdm
 scipy
