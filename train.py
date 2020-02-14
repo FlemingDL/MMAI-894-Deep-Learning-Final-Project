@@ -35,7 +35,6 @@ def train_model(model, loss_fn, optimizer, scheduler):
     for epoch in range(params.num_epochs):
         log_text = "Epoch {}/{}".format(epoch + 1, params.num_epochs)
         logging.info(log_text)
-        print(log_text)
         print('-' * 10)
 
         # Each epoch has a training and validation phase
@@ -85,7 +84,6 @@ def train_model(model, loss_fn, optimizer, scheduler):
 
             log_text = '{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc)
             logging.info(log_text)
-            print(log_text)
 
             checkpoint = {'epoch': epoch + 1,
                           'state_dict': model.state_dict(),
@@ -104,10 +102,8 @@ def train_model(model, loss_fn, optimizer, scheduler):
     time_elapsed = time.time() - since
     log_text = 'Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60)
     logging.info(log_text)
-    print(log_text)
     log_text = 'Best val Acc: {:4f}'.format(best_acc)
     logging.info(log_text)
-    print(log_text)
 
     # load best model weights
     model.load_state_dict(best_model_wts)
