@@ -14,12 +14,15 @@ import logging
 import utils
 import ssl
 from tqdm import tqdm
+import slack
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
                     help="Directory containing the dataset")
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
+parser.add_argument('--slack_key', default='none',
+                    help="Slack api key for messages")
 
 """
 From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
@@ -100,6 +103,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
             logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            post_slack_message('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
+                                                                                phase, epoch_loss, epoch_acc))
 
             # deep copy the model
             if phase == 'valid' and epoch_acc > best_acc:
@@ -233,10 +238,28 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
     return model_ft, input_size
 
 
+def post_slack_message(message):
+    if 'SLACK_API_TOKEN' in os.environ:
+        client.chat_postMessage(channel='CU3JRRA4E', text=message)
+
+
 if __name__ == '__main__':
+
+    # Ignore ssl certification (prevent error for some users)
+    ssl._create_default_https_context = ssl._create_unverified_context
 
     # Collect arguments from command-line options
     args = parser.parse_args()
+
+    if 'SLACK_API_TOKEN' in os.environ:
+        print('Heyyyy')
+        # Setup slack messages to track progress
+        # client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
+        post_slack_message("New deep learning training started")
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -252,6 +275,7 @@ if __name__ == '__main__':
 
     # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
     model_name = "inception"
+    post_slack_message('Model: {}'.format(model_name))
 
     # Number of classes in the dataset
     num_classes = 196
@@ -271,9 +295,6 @@ if __name__ == '__main__':
     # ---------
 
     print('Initializing the model...')
-
-    # Ignore ssl certification (prevent error for some users)
-    ssl._create_default_https_context = ssl._create_unverified_context
 
     # Initialize the model for this run
     model_ft, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
