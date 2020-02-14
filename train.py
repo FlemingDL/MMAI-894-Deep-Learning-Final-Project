@@ -192,11 +192,17 @@ if __name__ == '__main__':
         for param in model.parameters():
             param.requires_grad = False
 
+    # Get the number of activations going into the the last layer
     num_ftrs = model.fc.in_features
+
+    # Replace the last layer with a linear transformation.  The incoming data is the number
+    # of activations (num_ftrs) and the output is 196 classes (the length of classes names in our data set)
     model.fc = nn.Linear(num_ftrs, len(class_names))
 
+    # Send the model to the device
     model = model.to(device)
 
+    # Set loss function to be used for training.
     loss_fn = nn.CrossEntropyLoss()
 
     if params.freeze_network:
@@ -206,7 +212,10 @@ if __name__ == '__main__':
         optimizer = optim.SGD(model.parameters(), lr=params.learning_rate, momentum=params.momentum)
 
     # Decay LR by a factor of 0.1 every 7 epochs
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+    # exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
+    # Decay LR using ReduceLROnPlateau
+    exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', patience=3, threshold = 0.9)
 
     ######################################################################
     # Train and evaluate
