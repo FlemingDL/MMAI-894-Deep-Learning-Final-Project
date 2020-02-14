@@ -1,8 +1,9 @@
 {
-    "learning_rate": 0.01,
+    "learning_rate": 0.001,
     "momentum": 0.9,
-    "batch_size": 64,
-    "num_epochs": 100,
+    "batch_size": 16,
+    "num_epochs": 75,
     "num_workers": 4,
-    "freeze_network": true
+    "freeze_network": true,
+    "train_data_split": 0.8
 }

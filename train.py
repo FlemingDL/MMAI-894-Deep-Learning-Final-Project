@@ -131,10 +131,10 @@ if __name__ == '__main__':
     params.cuda = torch.cuda.is_available()
     if params.cuda:
         device = torch.device('cuda')
-        print('CUDA is available. Training on GPU: {}'.format(torch.cuda.get_device_name(0)))
+        logging.info('CUDA is available. Training on GPU: {}'.format(torch.cuda.get_device_name(0)))
     else:
         device = torch.device('cpu')
-        print('CUDA is not available. Training on CPU ...')
+        logging.info('CUDA is not available. Training on CPU ...')
 
     ######################################################################
     # Load Data
@@ -153,7 +153,6 @@ if __name__ == '__main__':
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         ]),
         'val': transforms.Compose([
-            transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
