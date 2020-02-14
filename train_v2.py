@@ -119,6 +119,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     logging.info('Best val Acc: {:4f}'.format(best_acc))
 
+    post_slack_message('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    post_slack_message('Best val Acc: {:4f}'.format(best_acc))
+
     # load best model weights
     model.load_state_dict(best_model_wts)
 
