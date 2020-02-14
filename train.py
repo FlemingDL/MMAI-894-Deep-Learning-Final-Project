@@ -21,9 +21,9 @@ parser.add_argument('--data_dir', default='data',
                     help="Directory containing the dataset")
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
-parser.add_argument('--restore_file', default=None,
-                    help="Optional, name of the file in --model_dir containing weights "
-                         "to reload before training")  # 'best' or 'train'
+# parser.add_argument('--restore_file', default=None,
+#                     help="Optional, name of the file in --model_dir containing weights "
+#                          "to reload before training")  # 'best' or 'train'
 
 
 def train_model(model, loss_fn, optimizer, scheduler):
@@ -121,6 +121,9 @@ if __name__ == '__main__':
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path)
 
+    # Set the logger
+    utils.set_logger(os.path.join(args.model_dir, 'train.log'))
+
     ######################################################################
     # Set GPU or CPU training
     # ---------
@@ -132,9 +135,6 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
         print('CUDA is not available. Training on CPU ...')
-
-    # Set the logger
-    utils.set_logger(os.path.join(args.model_dir, 'train.log'))
 
     ######################################################################
     # Load Data

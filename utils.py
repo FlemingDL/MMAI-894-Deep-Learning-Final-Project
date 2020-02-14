@@ -36,29 +36,6 @@ class Params():
         """Gives dict-like access to Params instance by `params.dict['learning_rate']"""
         return self.__dict__
 
-
-class RunningAverage():
-    """A simple class that maintains the running average of a quantity
-    
-    Example:
-    ```
-    loss_avg = RunningAverage()
-    loss_avg.update(2)
-    loss_avg.update(4)
-    loss_avg() = 3
-    ```
-    """
-    def __init__(self):
-        self.steps = 0
-        self.total = 0
-    
-    def update(self, val):
-        self.total += val
-        self.steps += 1
-    
-    def __call__(self):
-        return self.total/float(self.steps)
-        
     
 def set_logger(log_path):
     """Set the logger to log info in terminal and file `log_path`.
@@ -89,19 +66,6 @@ def set_logger(log_path):
         logger.addHandler(stream_handler)
 
 
-def save_dict_to_json(d, json_path):
-    """Saves dict of floats in json file
-
-    Args:
-        d: (dict) of float-castable values (np.float, int, float, etc.)
-        json_path: (string) path to json file
-    """
-    with open(json_path, 'w') as f:
-        # We need to convert the values to float for json (it doesn't accept np.array, np.float, )
-        d = {k: float(v) for k, v in d.items()}
-        json.dump(d, f, indent=4)
-
-
 def save_checkpoint(state, is_best, checkpoint):
     """Saves model and training parameters at checkpoint + 'last.pth.tar'. If is_best==True, also saves
     checkpoint + 'best.pth.tar'
@@ -115,8 +79,8 @@ def save_checkpoint(state, is_best, checkpoint):
     if not os.path.exists(checkpoint):
         print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
         os.mkdir(checkpoint)
-    else:
-        print("Checkpoint Directory exists! ")
+    # else:
+    #     print("Checkpoint Directory exists! ")
     torch.save(state, filepath)
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.tar'))
