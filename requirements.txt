@@ -1,4 +1,4 @@
-slack
+slackclient
 torchvision
 opencv-python
 tqdm

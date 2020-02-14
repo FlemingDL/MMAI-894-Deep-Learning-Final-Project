@@ -255,7 +255,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if 'SLACK_API_TOKEN' in os.environ:
-        print('Heyyyy')
         # Setup slack messages to track progress
         # client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
         ssl_context = ssl.create_default_context()
