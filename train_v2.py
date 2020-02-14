@@ -51,7 +51,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
         logging.info('-' * 10)
 
         # Each epoch has a training and validation phase
-        for phase in ['train', 'valid']:
+        for phase in ['train', 'val']:
             if phase == 'train':
                 model.train()  # Set model to training mode
             else:
