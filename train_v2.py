@@ -25,8 +25,6 @@ parser.add_argument('--data_dir', default='data',
                     help="Directory containing the dataset")
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
-parser.add_argument('--slack_key', default='none',
-                    help="Slack api key for messages")
 
 """
 From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
@@ -114,8 +112,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
             # post_slack_message('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
             #                                                                     phase, epoch_loss, epoch_acc))
-            pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
-                                                                      phase, epoch_loss, epoch_acc))
+
+            # send message every tenth epoch
+            if count % 10 == 0:
+                pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
+                                                                          phase, epoch_loss, epoch_acc))
 
             # deep copy the model
             if phase == 'train' and epoch_acc > best_acc:
@@ -306,7 +307,6 @@ if __name__ == '__main__':
 
     # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
     model_name = params.model_name
-    post_slack_message('Model: {}'.format(model_name))
 
     # Number of classes in the dataset
     num_classes = 196
