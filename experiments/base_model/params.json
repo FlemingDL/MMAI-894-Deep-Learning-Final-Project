@@ -1,6 +1,6 @@
 {
     "model_name": "inception",
-    "batch_size": 16,
+    "batch_size": 64,
     "num_epochs": 75,
     "feature_extract": false,
     "learning_rate": 0.001,

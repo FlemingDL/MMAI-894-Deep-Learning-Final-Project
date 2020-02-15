@@ -17,6 +17,7 @@ from tqdm import tqdm
 import slack
 from slack_progress import SlackProgress
 import json
+import shutil
 
 
 parser = argparse.ArgumentParser()
@@ -131,8 +132,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     logging.info('Best val Acc: {:4f}'.format(best_acc))
 
-    post_slack_message('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-    post_slack_message('Best val Acc: {:4f}'.format(best_acc))
+    post_slack_message('Training complete in {:.0f}m {:.0f}s\n'
+                       'Best val Acc: {:4f}'.format(time_elapsed // 60, time_elapsed % 60, best_acc))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
@@ -260,7 +261,8 @@ def post_slack_message(message):
 
 def post_slack_file(file_to_post):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.files_upload(channel='CU3JRRA4E', file=file_to_post)
+        file_path = os.path.join(os.getcwd(), file_to_post)
+        client.files_upload(channel='CU3JRRA4E', file=file_path)
 
 
 if __name__ == '__main__':
@@ -284,9 +286,10 @@ if __name__ == '__main__':
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-        post_slack_message("New training started\nExperiment is: {}".format(args.model_dir))
-        post_slack_message('With parameters:')
-        post_slack_file(json_path)
+        with open(json_path) as f:
+            params_text = json.load(f)
+        post_slack_message("New training started\nExperiment is: {}\n"
+                           "With parameters:{}".format(args.model_dir, params_text))
         sp = SlackProgress(os.environ['SLACK_API_TOKEN'], 'CU3JRRA4E')
 
     # Set the logger
@@ -434,16 +437,20 @@ if __name__ == '__main__':
     torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
 
     # save the validation accuracies
-    np.savetxt('validation_accuracies.csv', hist, delimiter=",")
+    val_accuracies_file = os.path.join(args.model_dir, '/export_files', 'validation_accuracies.csv')
+    np.savetxt(val_accuracies_file, hist, delimiter=",")
 
     # post final validation accuracies to slack
     post_slack_message('Here is a file of validation accuracies for each epoch')
-    val_accuracies_file = os.path.join(args.model_dir, 'validation_accuracies.csv')
     post_slack_file(val_accuracies_file)
+
+    # copy the checkpoint.pt file to a csv filetype for slack
+    chkpt_pt_file = os.path.join(args.model_dir, '/export_files', 'checkpoint.pt')
+    chkpt_csv_file = os.path.join(args.model_dir, '/export_files', 'checkpoint.csv')
+    chkpt_csv = shutil.copyfile(chkpt_pt_file, chkpt_csv_file)
 
     # post the final model
     post_slack_message('Here is the checkpoint model that provided the best accuracies')
-    chkpoint_model = os.path.join(args.model_dir, 'checkpoint.pt')
-    post_slack_file(chkpoint_model)
+    post_slack_file(chkpt_csv)
 
     print('Training complete.')
