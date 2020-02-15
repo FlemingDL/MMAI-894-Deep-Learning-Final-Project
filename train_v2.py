@@ -114,7 +114,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             #                                                                     phase, epoch_loss, epoch_acc))
 
             # send message every tenth epoch
-            if count % 10 == 0:
+            if epoch % 10 == 0:
                 pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
                                                                           phase, epoch_loss, epoch_acc))
 
