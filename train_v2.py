@@ -3,7 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# import numpy as np
+import numpy as np
 import torchvision
 from torchvision import datasets, models, transforms
 # import matplotlib.pyplot as plt
@@ -15,6 +15,9 @@ import utils
 import ssl
 from tqdm import tqdm
 import slack
+from slack_progress import SlackProgress
+import json
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -49,9 +52,14 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
+    # Create slack progress bar
+    pbar = sp.new(total=num_epochs)
+
     for epoch in range(num_epochs):
         logging.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
         logging.info('-' * 10)
+
+        pbar.pos = epoch
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -103,8 +111,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
             logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
-            post_slack_message('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
-                                                                                phase, epoch_loss, epoch_acc))
+            # post_slack_message('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
+            #                                                                     phase, epoch_loss, epoch_acc))
+            pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
+                                                                      phase, epoch_loss, epoch_acc))
 
             # deep copy the model
             if phase == 'train' and epoch_acc > best_acc:
@@ -114,6 +124,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 val_acc_history.append(epoch_acc)
 
         print('')
+
+    pbar.log('Epochs completed')
 
     time_elapsed = time.time() - since
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -246,6 +258,11 @@ def post_slack_message(message):
         client.chat_postMessage(channel='CU3JRRA4E', text=message)
 
 
+def post_slack_file(file_to_post):
+    if 'SLACK_API_TOKEN' in os.environ:
+        client.files_upload(channel='CU3JRRA4E', file=file_to_post)
+
+
 if __name__ == '__main__':
 
     # Ignore ssl certification (prevent error for some users)
@@ -267,7 +284,10 @@ if __name__ == '__main__':
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-        post_slack_message("New deep learning training started")
+        post_slack_message("New training started\nExperiment is: {}".format(args.model_dir))
+        post_slack_message('With parameters:')
+        post_slack_file(json_path)
+        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], 'CU3JRRA4E')
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -412,5 +432,18 @@ if __name__ == '__main__':
         'optimizer': optimizer_ft.state_dict()
     }
     torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
+
+    # save the validation accuracies
+    np.savetxt('validation_accuracies.csv', hist, delimiter=",")
+
+    # post final validation accuracies to slack
+    post_slack_message('Here is a file of validation accuracies for each epoch')
+    val_accuracies_file = os.path.join(args.model_dir, 'validation_accuracies.csv')
+    post_slack_file(val_accuracies_file)
+
+    # post the final model
+    post_slack_message('Here is the checkpoint model that provided the best accuracies')
+    chkpoint_model = os.path.join(args.model_dir, 'checkpoint.pt')
+    post_slack_file(chkpoint_model)
 
     print('Training complete.')
