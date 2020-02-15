@@ -66,7 +66,7 @@ def set_logger(log_path):
         logger.addHandler(stream_handler)
 
 
-def save_checkpoint(state, is_best, checkpoint):
+def save_checkpoint(state, checkpoint):
     """Saves model and training parameters at checkpoint + 'last.pth.tar'. If is_best==True, also saves
     checkpoint + 'best.pth.tar'
 

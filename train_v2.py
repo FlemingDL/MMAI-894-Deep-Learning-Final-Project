@@ -254,6 +254,12 @@ if __name__ == '__main__':
     # Collect arguments from command-line options
     args = parser.parse_args()
 
+    # Load the parameters from json file
+    json_path = os.path.join(args.model_dir, 'params.json')
+    assert os.path.isfile(
+        json_path), "No json configuration file found at {}".format(json_path)
+    params = utils.Params(json_path)
+
     if 'SLACK_API_TOKEN' in os.environ:
         # Setup slack messages to track progress
         # client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
@@ -276,21 +282,21 @@ if __name__ == '__main__':
     data_dir = "./data/"
 
     # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
-    model_name = "inception"
+    model_name = params.model_name
     post_slack_message('Model: {}'.format(model_name))
 
     # Number of classes in the dataset
     num_classes = 196
 
     # Batch size for training (change depending on how much memory you have)
-    batch_size = 16
+    batch_size = params.batch_size
 
     # Number of epochs to train for
-    num_epochs = 75
+    num_epochs = params.num_epochs
 
     # Flag for feature extracting. When False, we finetune the whole model,
     #   when True we only update the reshaped layer params
-    feature_extract = False
+    feature_extract = params.feature_extract
 
     ######################################################################
     # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
@@ -336,8 +342,8 @@ if __name__ == '__main__':
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val']}
     # Create training and validation dataloaders
     dataloaders_dict = {
-        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True, num_workers=4) for x in
-        ['train', 'val']}
+        x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True,
+                                       num_workers=params.num_workers) for x in ['train', 'val']}
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -379,7 +385,7 @@ if __name__ == '__main__':
                 print("\t", name)
 
     # Observe that all parameters are being optimized
-    optimizer_ft = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    optimizer_ft = optim.SGD(params_to_update, lr=params.learning_rate, momentum=params.momentum)
 
     # #####################################################################
     # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
@@ -396,7 +402,15 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=75,
+    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
                                  is_inception=(model_name == "inception"))
+
+    # Save the best model
+    checkpoint = {
+        'model': model_ft,
+        'state_dict': model_ft.state_dict(),
+        'optimizer': optimizer_ft.state_dict()
+    }
+    torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
 
     print('Training complete.')
