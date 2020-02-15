@@ -107,7 +107,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                                                                                 phase, epoch_loss, epoch_acc))
 
             # deep copy the model
-            if phase == 'valid' and epoch_acc > best_acc:
+            if phase == 'train' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
             if phase == 'valid':
