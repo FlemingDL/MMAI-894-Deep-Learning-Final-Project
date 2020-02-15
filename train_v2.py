@@ -110,7 +110,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             if phase == 'train' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'valid':
+            if phase == 'val':
                 val_acc_history.append(epoch_acc)
 
         print('')
