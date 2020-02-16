@@ -6,7 +6,8 @@ import slack
 import os
 import utils
 import json
-from torchvision import transforms
+from torchvision import transforms, datasets
+from pathlib import Path
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -16,7 +17,6 @@ parser.add_argument('--model_dir', default='experiments/base_model',
 
 
 def input_size_of_model(model_name):
-
     input_size = 0
 
     if model_name == "resnet":
@@ -84,25 +84,50 @@ if __name__ == '__main__':
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'test.log'))
 
+    # Set variables
     data_dir = "./data/"
     model_name = params.model_name
+    batch_size = params.batch_size
+    num_workers = params.num_workers
 
+    # Get the required input size of the network for resizing images
     input_size = input_size_of_model(model_name)
 
+    # Data augmentation and normalization for testing
+    data_transforms = transforms.Compose([
+        transforms.Resize(input_size),
+        transforms.CenterCrop(input_size),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+    # Load the model
     model_ft = load_checkpoint(filepath=args.model_dir)
 
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    data_transforms = {
-        'testing': transforms.Compose([
-            transforms.Resize(input_size),
-            transforms.CenterCrop(input_size),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-    }
-
-
-
+    # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
+
+    # Create test image dataset
+    test_data = datasets.ImageFolder(root=os.path.join(data_dir, 'test'), transform=data_transforms)
+
+    # Create test dataloaders
+    test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
+
+    # Set model to evaluate
+    model_ft.eval()
+
+    for inputs, _ in test_data_loader:
+        torch.no_grad()
+        inputs = inputs.to(device)
+        outputs = model_ft(inputs)
+        _, pred = torch.max(outputs, 1)
+
+    # TODO: Files for submission should be .txt files with the class prediction for
+    # image M on line M. Note that image M corresponds to the Mth annotation in
+    # the provided annotation file. An example of a file in this format is
+    # train_perfect_preds.txt
+
+

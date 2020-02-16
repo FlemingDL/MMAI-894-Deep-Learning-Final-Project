@@ -1,4 +1,4 @@
-"""Split the cars dataset into train/val/test and resize images to 224x224
+"""Split the cars dataset into train/val/test
 
 The cars dataset comes in the following format:
     cars_train/
@@ -10,12 +10,8 @@ The cars dataset comes in the following format:
         00002.jpg
         ...
 
-Original images have varying sizes.  Resizing to (224, 224) reduces the dataset size from ~1 GB to 300 MB, and
-loading smaller images makes training faster.
-
 The Stanford Cars Dataset already provides a test set, so we only need to split "cars_train" into training (train)
-and validation (val) sets.  Because we don't have a lot of images and we want that the statistics on the val set be as
-representative as possible, we'll take 20% of "cars_train" as val set.
+and validation (val) sets.
 
 The ImageFolder class provided by pytorch handles the class label of each image, providing the images are in a
 structure where each each image is saved in a folder where the folder name is the label of the images in that folder.
@@ -227,4 +223,4 @@ if __name__ == '__main__':
     logging.info('Cleaning up...')
     shutil.rmtree('cars_train')
     shutil.rmtree('cars_test')
-    shutil.rmtree('devkit')
+

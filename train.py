@@ -4,9 +4,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
-import torchvision
 from torchvision import datasets, models, transforms
-# import matplotlib.pyplot as plt
 import time
 import os
 import copy
@@ -393,7 +391,7 @@ if __name__ == '__main__':
 
     print('Create the optimizer...')
 
-    # Send the model to GPU
+    # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
 
     # Gather the parameters to be optimized/updated in this run. If we are
