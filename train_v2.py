@@ -3,7 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
+import pandas as pd
 import torchvision
 from torchvision import datasets, models, transforms
 # import matplotlib.pyplot as plt
@@ -18,7 +18,6 @@ import slack
 from slack_progress import SlackProgress
 import json
 import shutil
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -47,6 +46,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     since = time.time()
 
     val_acc_history = []
+    val_loss_history = []
+    train_acc_history = []
+    train_loss_history = []
 
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
@@ -118,12 +120,18 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
                                                                           phase, epoch_loss, epoch_acc))
 
-            # deep copy the model
+            # save the training history
+            if phase == 'train':
+                train_acc_history.append(epoch_acc)
+                train_loss_history.append(epoch_loss)
+            if phase == 'val':
+                val_acc_history.append(epoch_acc)
+                val_loss_history.append(epoch_loss)
+
+            # deep copy the the best model
             if phase == 'train' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
-            if phase == 'val':
-                val_acc_history.append(epoch_acc)
 
         print('')
 
@@ -139,7 +147,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     # load best model weights
     model.load_state_dict(best_model_wts)
 
-    return model, val_acc_history
+    return model, val_acc_history, val_loss_history, train_acc_history, train_loss_history
 
 
 """
@@ -257,13 +265,12 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
 def post_slack_message(message):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='CU3JRRA4E', text=message)
+        client.chat_postMessage(channel='#dl-model-progress', text=message)
 
 
-def post_slack_file(file_to_post):
+def post_slack_file(file_name):
     if 'SLACK_API_TOKEN' in os.environ:
-        file_path = os.path.join(os.getcwd(), file_to_post)
-        client.files_upload(channel='CU3JRRA4E', file=file_path)
+        client.files_upload(channels='#dl-model-progress', file=file_name, filename=file_name)
 
 
 if __name__ == '__main__':
@@ -425,8 +432,10 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
 
     # Train and evaluate
-    model_ft, hist = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft, num_epochs=num_epochs,
-                                 is_inception=(model_name == "inception"))
+    model_ft, val_acc_history, val_loss_history, \
+        train_acc_history, train_loss_history = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
+                                                            num_epochs=num_epochs,
+                                                            is_inception=(model_name == "inception"))
 
     # Save the best model
     checkpoint = {
@@ -437,20 +446,30 @@ if __name__ == '__main__':
     torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
 
     # save the validation accuracies
-    val_accuracies_file = os.path.join(args.model_dir, '/export_files', 'validation_accuracies.csv')
-    np.savetxt(val_accuracies_file, hist, delimiter=",")
+    val_accuracies_file = os.path.join(args.model_dir, 'validation_accuracies.csv')
+    df = pd.DataFrame(data=val_acc_history)
+    df.to_csv(val_accuracies_file, index=None, header=False)
+
+    # save the validation losses
+    val_loss_file = os.path.join(args.model_dir, 'validation_losses.csv')
+    df = pd.DataFrame(data=val_loss_history)
+    df.to_csv(val_loss_file, index=None, header=False)
+
+    # save the train accuracies
+    train_accuracies_file = os.path.join(args.model_dir, 'train_accuracies.csv')
+    df = pd.DataFrame(data=train_acc_history)
+    df.to_csv(train_accuracies_file, index=None, header=False)
+
+    # save the train losses
+    train_loss_file = os.path.join(args.model_dir, 'train_losses.csv')
+    df = pd.DataFrame(data=train_loss_history)
+    df.to_csv(train_loss_file, index=None, header=False)
+
+    # zip files
+    zip_file = shutil.make_archive(base_name=args.model_dir, format='zip', root_dir=args.model_dir)
 
     # post final validation accuracies to slack
-    post_slack_message('Here is a file of validation accuracies for each epoch')
-    post_slack_file(val_accuracies_file)
-
-    # copy the checkpoint.pt file to a csv filetype for slack
-    chkpt_pt_file = os.path.join(args.model_dir, '/export_files', 'checkpoint.pt')
-    chkpt_csv_file = os.path.join(args.model_dir, '/export_files', 'checkpoint.csv')
-    chkpt_csv = shutil.copyfile(chkpt_pt_file, chkpt_csv_file)
-
-    # post the final model
-    post_slack_message('Here is the checkpoint model that provided the best accuracies')
-    post_slack_file(chkpt_csv)
+    post_slack_message('Here are the training results for the experiment')
+    post_slack_file(zip_file)
 
     print('Training complete.')

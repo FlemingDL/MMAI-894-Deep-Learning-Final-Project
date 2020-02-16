@@ -2,4 +2,12 @@
 /cars_test.tgz
 /cars_train.tgz
 /devkit/
+/cars_test/
+/cars_train/
 /data/
+/experiments/base_model/checkpoint.pt
+/experiments/base_model/train.log
+/experiments/base_model/train_accuracies.csv
+/experiments/base_model/train_losses.csv
+/experiments/base_model/validation_accuracies.csv
+/experiments/base_model/validation_losses.csv

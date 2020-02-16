@@ -5,5 +5,6 @@
     "feature_extract": false,
     "learning_rate": 0.001,
     "momentum": 0.9,
-    "num_workers": 4
+    "num_workers": 4,
+    "train_data_split": 0.8
 }
