@@ -1,3 +1,4 @@
+pandas
 slack-progress
 slackclient
 torchvision

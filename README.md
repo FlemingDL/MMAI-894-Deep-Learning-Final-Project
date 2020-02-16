@@ -1,5 +1,5 @@
 # 894_DeepLearning_final_project_v2
-This is team fleming's deep learning final project version 2
+This is team fleming's deep learning final project version 2.  Code is written for Python 3.
 
 ## Getting Started
 Clone this repository
@@ -24,7 +24,7 @@ $ source venv/bin/activate
 ```
 Install the packages in requirements.txt for this project
 ```bash
-$ pip3 install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 ## Dataset
@@ -34,10 +34,12 @@ $ python download_data.py
 ```
 
 ### Data Pre-processing
-Extract training images and split them by 80:20.  Images are cropped by the bounding boxes, resized to 224 x 224, and
-saved into folders that are grouped by label.  The reason images of the same class are stored in folders of the same
-class name is becuase the torchvision package includes a class called ImageFolder.  This class handles a lot of the work
-providing the images are in a structure where each directory is a label.
+Extract training images and split them into train and validate according to the ratio set in the params.json file in
+the experiments sub-folder.  If the parameter 'crop_images_to_bounding_box' in params.json is set to 'true', images 
+are first cropped by the bounding boxes and then saved into folders that are grouped by label.  The reason images of 
+the same class are stored in folders of the same class name is because the torchvision package includes a class 
+called ImageFolder.  This class handles a lot of the work providing the images are in a structure where each directory 
+is a label.
 ```bash
 $ python preprocess.py
 ```
