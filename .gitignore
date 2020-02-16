@@ -11,3 +11,5 @@
 /experiments/base_model/train_losses.csv
 /experiments/base_model/validation_accuracies.csv
 /experiments/base_model/validation_losses.csv
+/experiments/base_model/pre_process.log
+/experiments/base_model/test.log

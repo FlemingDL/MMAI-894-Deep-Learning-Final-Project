@@ -33,11 +33,13 @@ import random
 from tqdm import tqdm
 import cv2 as cv
 import shutil
+import logging
 
-img_width, img_height = 224, 224
+import utils
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--crop_to_bounding_box', default=True, help='Crop images to bounding box')
+parser.add_argument('--model_dir', default='experiments/base_model',
+                    help="Directory containing params.json")
 
 
 def ensure_folder(folder):
@@ -61,8 +63,8 @@ def get_bounding_box(annotation):
     return bbox_x1, bbox_y1, bbox_x2, bbox_y2
 
 
-def process_train_data():
-    print('Processing training data...')
+def process_train_data(params):
+    logging.info('Processing training data. Crop to bounding box set to: {}'.format(params.crop_images_to_bounding_box))
     annotations = get_annotations('cars_train_annos')
 
     bounding_boxes = []
@@ -79,10 +81,9 @@ def process_train_data():
         class_ids.append(class_id)
 
     labels_count = np.unique(class_ids).shape[0]
-    # print(np.unique(class_ids))
-    print('The number of different cars is %d' % labels_count)
+    logging.info('The number of different cars is %d' % labels_count)
 
-    save_train_data(file_names, labels, bounding_boxes)
+    save_train_data(file_names, labels, bounding_boxes, params)
 
 
 def crop_and_save_image(src_folder, file_name, bounding_box, dst_path):
@@ -97,22 +98,20 @@ def crop_and_save_image(src_folder, file_name, bounding_box, dst_path):
     x2 = min(x2 + margin, width)
     y2 = min(y2 + margin, height)
     cropped_image = src_image[y1:y2, x1:x2]
-    dst_img = cv.resize(src=cropped_image, dsize=(img_height, img_width))
-    cv.imwrite(dst_path, dst_img)
+    cv.imwrite(dst_path, cropped_image)
 
 
 def save_image(src_folder, file_name, dst_path):
     src_path = os.path.join(src_folder, file_name)
     src_image = cv.imread(src_path)
-    dst_img = cv.resize(src=src_image, dsize=(img_height, img_width))
-    cv.imwrite(dst_path, dst_img)
+    cv.imwrite(dst_path, src_image)
 
 
-def save_train_data(filenames, labels, bounding_boxes):
+def save_train_data(filenames, labels, bounding_boxes, params):
     src_folder = 'cars_train'
     num_samples = len(filenames)
 
-    train_split = 0.8
+    train_split = params.train_data_split
     num_train = int(round(num_samples * train_split))
     train_indexes = random.sample(range(num_samples), num_train)
 
@@ -134,14 +133,14 @@ def save_train_data(filenames, labels, bounding_boxes):
             os.makedirs(dst_path)
         dst_path = os.path.join(dst_path, file_name)
 
-        if args.crop_to_bounding_box:
+        if params.crop_images_to_bounding_box:
             crop_and_save_image(src_folder, file_name, bounding_box, dst_path)
         else:
             save_image(src_folder, file_name, dst_path)
 
 
-def process_test_data():
-    print("Processing test data...")
+def process_test_data(params):
+    logging.info('Processing test data. Crop to bounding box set to: {}'.format(params.crop_images_to_bounding_box))
     annotations = get_annotations('cars_test_annos')
 
     bounding_boxes = []
@@ -165,33 +164,42 @@ def save_test_data(file_names, bounding_boxes):
         bounding_box = bounding_boxes[i]
         dst_path = os.path.join(dst_folder, file_name)
 
-        if args.crop_to_bounding_box:
+        if params.crop_images_to_bounding_box:
             crop_and_save_image(src_folder, file_name, bounding_box, dst_path)
         else:
             save_image(src_folder, file_name, dst_path)
 
 
 if __name__ == '__main__':
+
+    # Collect arguments from command-line options
     args = parser.parse_args()
 
-    print('Cropping images to bounding box is set to: {}'.format(args.crop_to_bounding_box))
+    # Set the logger
+    utils.set_logger(os.path.join(args.model_dir, 'pre_process.log'))
+
+    # Load the parameters from json file
+    json_path = os.path.join(args.model_dir, 'params.json')
+    assert os.path.isfile(
+        json_path), "No json configuration file found at {}".format(json_path)
+    params = utils.Params(json_path)
 
     # Extract the zip files if they haven't been extracted
-    print('Checking training set...')
+    logging.info('Checking training set...')
     if not os.path.exists('cars_train'):
-        print('No cars_train folder.  Extracting cars_train.tgz')
+        logging.info('No cars_train folder.  Extracting cars_train.tgz')
         with tarfile.open('cars_train.tgz', "r:gz") as tar:
             tar.extractall()
 
-    print('Checking testing set...')
+    logging.info('Checking testing set...')
     if not os.path.exists('cars_test'):
-        print('No cars_test folder.  Extracting cars_test.tgz')
+        logging.info('No cars_test folder.  Extracting cars_test.tgz')
         with tarfile.open('cars_test.tgz', "r:gz") as tar:
             tar.extractall()
 
-    print('Checking devkit set...')
+    logging.info('Checking devkit set...')
     if not os.path.exists('devkit'):
-        print('No cars_train folder.  Extracting cars_train.tgz')
+        logging.info('No cars_train folder.  Extracting cars_train.tgz')
         with tarfile.open('car_devkit.tgz', "r:gz") as tar:
             tar.extractall()
 
@@ -200,18 +208,23 @@ if __name__ == '__main__':
     # Get class names
     class_names = cars_meta_data['class_names']  # the shape is 1 x 196
     class_names = np.transpose(class_names)  # convert to 196 x 1
-    print('Class names loaded...')
-    print('Examples of class names: [{}]'.format(class_names[8][0][0]))
+    logging.info('Class names loaded...')
+    logging.info('Examples of class names: [{}]'.format(class_names[8][0][0]))
+
+    # remove any previous data
+    if os.path.exists('data'):
+        logging.info('Remove previous files...')
+        shutil.rmtree('data')
 
     ensure_folder('data/train')
     ensure_folder('data/val')
     ensure_folder('data/test')
 
-    process_train_data()
-    process_test_data()
+    process_train_data(params)
+    process_test_data(params)
 
     # clean up
-    print('Cleaning up...')
+    logging.info('Cleaning up...')
     shutil.rmtree('cars_train')
     shutil.rmtree('cars_test')
     shutil.rmtree('devkit')
