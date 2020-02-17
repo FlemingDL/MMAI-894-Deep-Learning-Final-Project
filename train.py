@@ -121,10 +121,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             # save the training history
             if phase == 'train':
-                train_acc_history.append(epoch_acc)
+                train_acc_history.append(epoch_acc.item())
                 train_loss_history.append(epoch_loss)
             if phase == 'val':
-                val_acc_history.append(epoch_acc)
+                val_acc_history.append(epoch_acc.item())
                 val_loss_history.append(epoch_loss)
 
             # deep copy the the best model
@@ -264,12 +264,12 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
 def post_slack_message(message):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='#temp', text=message)
+        client.chat_postMessage(channel='#dl-model-progress', text=message)
 
 
 def post_slack_file(file_name):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.files_upload(channels='#temp', file=file_name, filename=file_name)
+        client.files_upload(channels='#dl-model-progress', file=file_name, filename=file_name)
 
 
 def create_slack_progress_bar():
@@ -315,7 +315,7 @@ if __name__ == '__main__':
             params_text = json.load(f)
         post_slack_message("New training started\nExperiment is: {}\n"
                            "With parameters:{}".format(args.model_dir, params_text))
-        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], '#temp')
+        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], '#dl-model-progress')
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -463,8 +463,6 @@ if __name__ == '__main__':
     torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
 
     # save the validation accuracies
-    # TODO: val_acc_history is a tensor (from calc in train_model above) convert to scalar
-    #  the current return looks like this: tensor(0.8312, device='cuda:0', dtype=torch.float64)
     val_accuracies_file = os.path.join(args.model_dir, 'validation_accuracies.csv')
     df = pd.DataFrame(data=val_acc_history)
     df.to_csv(val_accuracies_file, index=None, header=False)
@@ -475,8 +473,6 @@ if __name__ == '__main__':
     df.to_csv(val_loss_file, index=None, header=False)
 
     # save the train accuracies
-    # TODO: train_acc_history is a tensor (from calc in train_model above) convert to scalar
-    #  the current return looks like this: tensor(0.8312, device='cuda:0', dtype=torch.float64)
     train_accuracies_file = os.path.join(args.model_dir, 'train_accuracies.csv')
     df = pd.DataFrame(data=train_acc_history)
     df.to_csv(train_accuracies_file, index=None, header=False)
