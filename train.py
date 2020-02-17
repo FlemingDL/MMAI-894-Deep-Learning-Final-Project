@@ -52,13 +52,13 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     best_acc = 0.0
 
     # Create slack progress bar
-    pbar = sp.new(total=num_epochs)
+    pbar = create_slack_progress_bar()
 
     for epoch in range(num_epochs):
         logging.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
         logging.info('-' * 10)
 
-        pbar.pos = epoch
+        update_slack_progress_bar(pbar, epoch, num_epochs)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -115,8 +115,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
             # send message every tenth epoch
             if epoch % 10 == 0:
-                pbar.log('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
-                                                                          phase, epoch_loss, epoch_acc))
+                message = 'Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
+                                                                           phase, epoch_loss, epoch_acc)
+                log_message_to_slack_progress_bar(pbar, message)
 
             # save the training history
             if phase == 'train':
@@ -133,7 +134,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
         print('')
 
-    pbar.log('Epochs completed')
+    log_message_to_slack_progress_bar(pbar, 'Epochs completed')
 
     time_elapsed = time.time() - since
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -263,12 +264,30 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
 def post_slack_message(message):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='#dl-model-progress', text=message)
+        client.chat_postMessage(channel='#temp', text=message)
 
 
 def post_slack_file(file_name):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.files_upload(channels='#dl-model-progress', file=file_name, filename=file_name)
+        client.files_upload(channels='#temp', file=file_name, filename=file_name)
+
+
+def create_slack_progress_bar():
+    if 'SLACK_API_TOKEN' in os.environ:
+        pbar = sp.new()
+    else:
+        pbar = None
+    return pbar
+
+
+def update_slack_progress_bar(pbar, position, total):
+    if 'SLACK_API_TOKEN' in os.environ:
+        pbar.pos = int(position/total * 100)
+
+
+def log_message_to_slack_progress_bar(pbar, message):
+    if 'SLACK_API_TOKEN' in os.environ:
+        pbar.log(message)
 
 
 if __name__ == '__main__':
@@ -296,7 +315,7 @@ if __name__ == '__main__':
             params_text = json.load(f)
         post_slack_message("New training started\nExperiment is: {}\n"
                            "With parameters:{}".format(args.model_dir, params_text))
-        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], 'CU3JRRA4E')
+        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], '#temp')
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -431,9 +450,9 @@ if __name__ == '__main__':
 
     # Train and evaluate
     model_ft, val_acc_history, val_loss_history, \
-        train_acc_history, train_loss_history = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
-                                                            num_epochs=num_epochs,
-                                                            is_inception=(model_name == "inception"))
+    train_acc_history, train_loss_history = train_model(model_ft, dataloaders_dict, criterion, optimizer_ft,
+                                                        num_epochs=num_epochs,
+                                                        is_inception=(model_name == "inception"))
 
     # Save the best model
     checkpoint = {
@@ -471,7 +490,7 @@ if __name__ == '__main__':
     zip_file = shutil.make_archive(base_name=args.model_dir, format='zip', root_dir=args.model_dir)
 
     # post final validation accuracies to slack
-    post_slack_message('Here are the training results for the experiment')
+    post_slack_message('Here are the training results for the experiment:')
     post_slack_file(zip_file)
 
     print('Training complete.')
