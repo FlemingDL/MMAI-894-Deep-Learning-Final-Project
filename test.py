@@ -126,8 +126,10 @@ if __name__ == '__main__':
         _, pred = torch.max(outputs, 1)
 
     # TODO: Files for submission should be .txt files with the class prediction for
-    # image M on line M. Note that image M corresponds to the Mth annotation in
-    # the provided annotation file. An example of a file in this format is
-    # train_perfect_preds.txt
+    #  image M on line M. Note that image M corresponds to the Mth annotation in
+    #  the provided annotation file. An example of a file in this format is
+    #  train_perfect_preds.txt
+
+
 
 

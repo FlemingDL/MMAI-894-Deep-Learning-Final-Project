@@ -444,6 +444,8 @@ if __name__ == '__main__':
     torch.save(checkpoint, os.path.join(args.model_dir, 'checkpoint.pt'))
 
     # save the validation accuracies
+    # TODO: val_acc_history is a tensor (from calc in train_model above) convert to scalar
+    #  the current return looks like this: tensor(0.8312, device='cuda:0', dtype=torch.float64)
     val_accuracies_file = os.path.join(args.model_dir, 'validation_accuracies.csv')
     df = pd.DataFrame(data=val_acc_history)
     df.to_csv(val_accuracies_file, index=None, header=False)
@@ -454,6 +456,8 @@ if __name__ == '__main__':
     df.to_csv(val_loss_file, index=None, header=False)
 
     # save the train accuracies
+    # TODO: train_acc_history is a tensor (from calc in train_model above) convert to scalar
+    #  the current return looks like this: tensor(0.8312, device='cuda:0', dtype=torch.float64)
     train_accuracies_file = os.path.join(args.model_dir, 'train_accuracies.csv')
     df = pd.DataFrame(data=train_acc_history)
     df.to_csv(train_accuracies_file, index=None, header=False)
