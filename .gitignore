@@ -13,3 +13,8 @@
 /experiments/base_model/validation_losses.csv
 /experiments/base_model/pre_process.log
 /experiments/base_model/test.log
+/experiments/base_model/hyperparameter_tuning.log
+/experiments/base_model/best_objective_plot.html
+/experiments/base_model/best_objective_plot.jpg
+/experiments/base_model/plot_response_surface_image.html
+/experiments/base_model/plot_response_surface_image.jpg

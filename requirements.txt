@@ -1,3 +1,5 @@
+imgkit
+ax-platform
 pandas
 slack-progress
 slackclient

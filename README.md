@@ -43,6 +43,21 @@ is a label.
 ```bash
 $ python preprocess.py
 ```
+To run for a specific experiment:
+ ```bash
+$ python preprocess.py --model_dir 'experiments/<directory name>'
+```
+
+### Hyperparameter Tune
+This python file runs hyperparameter tuning on learning rate and momentum using Ax https://ax.dev.  The optimal 
+learning rate and momentum will be saved to the params.json file in the folder './experiments/<experiment name>'.
+```bash
+$ python preprocess.py
+```
+To run for a specific experiment:
+ ```bash
+$ python train.py --model_dir 'experiments/<directory name>'
+```
 
 ### Train
 The default experiment is in './experiments/base_model'.  In this folder is a set of training parameters in
