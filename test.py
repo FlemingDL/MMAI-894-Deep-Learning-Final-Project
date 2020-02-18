@@ -127,7 +127,8 @@ if __name__ == '__main__':
     model_ft = model_ft.to(device)
 
     # Create test image dataset
-    test_data = datasets.ImageFolderWithPaths(root=os.path.join(data_dir, 'test'), transform=data_transforms)
+    test_data = ImageFolderWithPaths(root=os.path.join(data_dir, 'test'), transform=data_transforms)
+    # test_data = datasets.ImageFolder(root=os.path.join(data_dir, 'test'), transform=data_transforms)
 
     # Create test dataloaders
     test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
@@ -147,7 +148,7 @@ if __name__ == '__main__':
         print('image paths: {}'.format(paths))
         image_paths.append(paths)
         print('prediction: {}'.format(pred))
-        predictions.append(pred)
+        predictions.append(pred + 1)
 
     # TODO: Files for submission should be .txt files with the class prediction for
     #  image M on line M. Note that image M corresponds to the Mth annotation in
