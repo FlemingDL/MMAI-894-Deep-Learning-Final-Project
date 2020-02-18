@@ -7,7 +7,8 @@ import os
 import utils
 import json
 from torchvision import transforms, datasets
-from pathlib import Path
+import pandas as pd
+import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -15,6 +16,21 @@ parser.add_argument('--data_dir', default='data',
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
 
+
+class ImageFolderWithPaths(datasets.ImageFolder):
+    """Custom dataset that includes image file paths. Extends
+    torchvision.datasets.ImageFolder
+    """
+
+    # override the __getitem__ method. this is the method that dataloader calls
+    def __getitem__(self, index):
+        # this is what ImageFolder normally returns
+        original_tuple = super(ImageFolderWithPaths, self).__getitem__(index)
+        # the image file path
+        path = self.imgs[index][0]
+        # make a new tuple that includes original and the path
+        tuple_with_path = (original_tuple + (path,))
+        return tuple_with_path
 
 def input_size_of_model(model_name):
     input_size = 0
@@ -45,7 +61,7 @@ def input_size_of_model(model_name):
 
 
 def load_checkpoint(filepath, inference=False):
-    checkpoint = torch.load(filepath + 'checkpoint.pt')
+    checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'))
     model = checkpoint['model']
     if inference:
         for parameter in model.parameter():
@@ -111,7 +127,7 @@ if __name__ == '__main__':
     model_ft = model_ft.to(device)
 
     # Create test image dataset
-    test_data = datasets.ImageFolder(root=os.path.join(data_dir, 'test'), transform=data_transforms)
+    test_data = datasets.ImageFolderWithPaths(root=os.path.join(data_dir, 'test'), transform=data_transforms)
 
     # Create test dataloaders
     test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
@@ -119,17 +135,36 @@ if __name__ == '__main__':
     # Set model to evaluate
     model_ft.eval()
 
-    for inputs, _ in test_data_loader:
+    image_paths = []
+    predictions = []
+
+    for inputs, _, paths in test_data_loader:
         torch.no_grad()
         inputs = inputs.to(device)
         outputs = model_ft(inputs)
         _, pred = torch.max(outputs, 1)
+
+        print('image paths: {}'.format(paths))
+        image_paths.append(paths)
+        print('prediction: {}'.format(pred))
+        predictions.append(pred)
 
     # TODO: Files for submission should be .txt files with the class prediction for
     #  image M on line M. Note that image M corresponds to the Mth annotation in
     #  the provided annotation file. An example of a file in this format is
     #  train_perfect_preds.txt
 
+    # save the image paths
+    image_paths_file = os.path.join(args.model_dir, 'image_paths_file.csv')
+    df = pd.DataFrame(data=image_paths)
+    df.to_csv(image_paths_file, index=None, header=False)
+
+    # save the predictions
+    predictions_file = os.path.join(args.model_dir, 'predictions_file.csv')
+    df = pd.DataFrame(data=predictions)
+    df.to_csv(predictions_file, index=None, header=False)
+
+    print('Done testing!')
 
 
 
