@@ -152,7 +152,7 @@ def process_test_data(params):
 
 def save_test_data(file_names, bounding_boxes):
     src_folder = 'cars_test'
-    dst_folder = 'data/test'
+    dst_folder = 'data/test/no_label'
     num_samples = len(file_names)
 
     for i in tqdm(range(num_samples)):
@@ -214,7 +214,7 @@ if __name__ == '__main__':
 
     ensure_folder('data/train')
     ensure_folder('data/val')
-    ensure_folder('data/test')
+    ensure_folder('data/test/no_label')
 
     process_train_data(params)
     process_test_data(params)
