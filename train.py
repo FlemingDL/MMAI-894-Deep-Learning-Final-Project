@@ -130,14 +130,16 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
-        slack_loss_img_response = post_slack_file(create_line_graph_image(train_loss_history, val_loss_history,
-                                                                          'train', 'validation',
-                                                                          'Loss Per Epoch'),
-                                                  slack_loss_img_response)
-        slack_acc_img_response = post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
-                                                                          'train', 'validation',
-                                                                          'Accuracy Per Epoch'),
-                                                  slack_acc_img_response)
+        # send graph every tenth epoch
+        if epoch % 10 == 0 and epoch != 0:
+            slack_loss_img_response = post_slack_file(create_line_graph_image(train_loss_history, val_loss_history,
+                                                                              'train', 'validation',
+                                                                              'Loss Per Epoch'),
+                                                      slack_loss_img_response)
+            slack_acc_img_response = post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
+                                                                              'train', 'validation',
+                                                                              'Accuracy Per Epoch'),
+                                                      slack_acc_img_response)
 
         print('')
 
