@@ -1,3 +1,4 @@
+matplotlib
 ax-platform
 pandas
 slack-progress

@@ -16,6 +16,8 @@ import slack
 from slack_progress import SlackProgress
 import json
 import shutil
+import matplotlib.pyplot as plt
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -53,6 +55,10 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
     # Create slack progress bar
     pbar = create_slack_progress_bar()
+
+    # Initialize slack image upload response
+    slack_loss_img_response = None
+    slack_acc_img_response = None
 
     for epoch in range(num_epochs):
         logging.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -110,14 +116,6 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
             logging.info('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
-            # post_slack_message('Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
-            #                                                                     phase, epoch_loss, epoch_acc))
-
-            # send message every tenth epoch
-            if epoch % 10 == 0:
-                message = 'Epoch {}/{} {} Loss: {:.4f} Acc: {:.4f}'.format(epoch, num_epochs - 1,
-                                                                           phase, epoch_loss, epoch_acc)
-                log_message_to_slack_progress_bar(pbar, message)
 
             # save the training history
             if phase == 'train':
@@ -131,6 +129,15 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             if phase == 'train' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
+
+        slack_loss_img_response = post_slack_file(create_line_graph_image(train_loss_history, val_loss_history,
+                                                                          'train', 'validation',
+                                                                          'Loss Per Epoch'),
+                                                  slack_loss_img_response)
+        slack_acc_img_response = post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
+                                                                          'train', 'validation',
+                                                                          'Accuracy Per Epoch'),
+                                                  slack_acc_img_response)
 
         print('')
 
@@ -264,12 +271,21 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
 def post_slack_message(message):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='#dl-model-progress', text=message)
+        return client.chat_postMessage(channel=slack_channel, text=message)
 
 
-def post_slack_file(file_name):
+def post_slack_file(file_name, response=None):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.files_upload(channels='#dl-model-progress', file=file_name, filename=file_name)
+        if response is None:
+            return client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+        else:
+            delete_slack_file(response)
+            return client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+
+
+def delete_slack_file(response):
+    if 'SLACK_API_TOKEN' in os.environ:
+        client.files_delete(file=response['file']['id'])
 
 
 def create_slack_progress_bar():
@@ -282,7 +298,7 @@ def create_slack_progress_bar():
 
 def update_slack_progress_bar(pbar, position, total):
     if 'SLACK_API_TOKEN' in os.environ:
-        pbar.pos = int(position/total * 100)
+        pbar.pos = int(position / total * 100)
 
 
 def log_message_to_slack_progress_bar(pbar, message):
@@ -290,7 +306,22 @@ def log_message_to_slack_progress_bar(pbar, message):
         pbar.log(message)
 
 
+def create_line_graph_image(y1, y2, y1_name, y2_name, title):
+    plt.figure(figsize=(10, 6))
+    plt.plot(y1, label=y1_name)
+    plt.plot(y2, label=y2_name)
+    plt.legend()
+    plt.title(title)
+    image_file = os.path.join(args.model_dir, title.replace(" ", "_") + ".png")
+    plt.savefig(image_file)
+    return image_file
+
+
 if __name__ == '__main__':
+
+    # Set slack channel
+    slack_channel = '#dl-model-progress'
+    # slack_channel = '#temp'
 
     # Ignore ssl certification (prevent error for some users)
     ssl._create_default_https_context = ssl._create_unverified_context
@@ -315,7 +346,7 @@ if __name__ == '__main__':
             params_text = json.load(f)
         post_slack_message("New training started\nExperiment is: {}\n"
                            "With parameters:{}".format(args.model_dir, params_text))
-        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], '#dl-model-progress')
+        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], slack_channel)
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -432,7 +463,15 @@ if __name__ == '__main__':
                 print("\t", name)
 
     # Observe that all parameters are being optimized
-    optimizer_ft = optim.SGD(params_to_update, lr=params.learning_rate, momentum=params.momentum)
+    if params.optimizer == 'sgd':
+        optimizer_ft = optim.SGD(params_to_update, lr=params.learning_rate, momentum=params.momentum)
+
+    elif params.optimizer == 'adam':
+        optimizer_ft = optim.Adam(params_to_update, lr=params.learning_rate)
+
+    else:
+        logging.info("Invalid optimizer name, exiting...")
+        exit()
 
     # #####################################################################
     # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
