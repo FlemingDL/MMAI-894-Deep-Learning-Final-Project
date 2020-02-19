@@ -52,11 +52,11 @@ $ python preprocess.py --model_dir 'experiments/<directory name>'
 This python file runs hyperparameter tuning on learning rate and momentum using Ax https://ax.dev.  The optimal 
 learning rate and momentum will be saved to the params.json file in the experiment folder.
 ```bash
-$ python preprocess.py
+$ python hyperparameter_tuning.py
 ```
 To run for a specific experiment:
  ```bash
-$ python train.py --model_dir 'experiments/<directory name>'
+$ python hyperparameter_tuning.py --model_dir 'experiments/<directory name>'
 ```
 
 ### Train
