@@ -126,7 +126,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                 val_loss_history.append(epoch_loss)
 
             # deep copy the the best model
-            if phase == 'train' and epoch_acc > best_acc:
+            if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
 
@@ -137,9 +137,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                                                                               'Loss Per Epoch'),
                                                       slack_loss_img_response)
             slack_acc_img_response = post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
-                                                                              'train', 'validation',
-                                                                              'Accuracy Per Epoch'),
-                                                      slack_acc_img_response)
+                                                                             'train', 'validation',
+                                                                             'Accuracy Per Epoch'),
+                                                     slack_acc_img_response)
 
         print('')
 
