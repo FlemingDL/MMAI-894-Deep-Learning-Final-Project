@@ -4,10 +4,14 @@ Hyperparameter tuning using Ax.
 Code heavily taken from https://ax.dev/tutorials/tune_cnn.html
 
 """
+from typing import Dict
+
 import torch
 import numpy as np
 import argparse
 import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
 from torchvision import datasets, models, transforms
 import ssl
 import logging
@@ -109,6 +113,108 @@ def set_parameter_requires_grad(model, feature_extracting):
             param.requires_grad = False
 
 
+def train(
+    net: torch.nn.Module,
+    train_loader: DataLoader,
+    parameters: Dict[str, float],
+    dtype: torch.dtype,
+    device: torch.device,
+) -> nn.Module:
+    """
+    Train CNN on provided data set.
+    Args:
+        net: initialized neural network
+        train_loader: DataLoader containing training set
+        parameters: dictionary containing parameters to be passed to the optimizer.
+            - lr: default (0.001)
+            - momentum: default (0.0)
+            - weight_decay: default (0.0)
+            - num_epochs: default (1)
+        dtype: torch dtype
+        device: torch device
+    Returns:
+        nn.Module: trained CNN.
+    """
+    # Initialize network
+    net.to(dtype=dtype, device=device)  # pyre-ignore [28]
+    net.train()
+    # Define loss and optimizer
+    # criterion = nn.NLLLoss(reduction="sum")
+    criterion = nn.CrossEntropyLoss()
+
+    if optimizer_selected == 'sgd':
+        optimizer = optim.SGD(
+            net.parameters(),
+            lr=parameters.get("lr", 0.001),
+            momentum=parameters.get("momentum", 0.0),
+            weight_decay=parameters.get("weight_decay", 0.0),
+        )
+    elif optimizer_selected == 'adam':
+        optimizer = optim.Adam(
+            net.parameters(),
+            lr=parameters.get("lr", 0.001),
+            eps=parameters.get("eps", 1e-08),
+            weight_decay=parameters.get("weight_decay", 0.0),
+        )
+    else:
+        logging.info("Invalid optimizer name, exiting...")
+        exit()
+
+    scheduler = optim.lr_scheduler.StepLR(
+        optimizer,
+        step_size=int(parameters.get("step_size", 30)),
+        gamma=parameters.get("gamma", 1.0),  # default is no learning rate decay
+    )
+    num_epochs = parameters.get("num_epochs", 1)
+
+    # Train Network
+    for _ in range(num_epochs):
+        for inputs, labels in train_loader:
+            # move data to proper dtype and device
+            inputs = inputs.to(dtype=dtype, device=device)
+            labels = labels.to(device=device)
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
+
+            # forward + backward + optimize
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
+    return net
+
+
+def evaluate(
+    net: nn.Module, data_loader: DataLoader, dtype: torch.dtype, device: torch.device
+) -> float:
+    """
+    Compute classification accuracy on provided dataset.
+    Args:
+        net: trained model
+        data_loader: DataLoader containing the evaluation set
+        dtype: torch dtype
+        device: torch device
+    Returns:
+        float: classification accuracy
+    """
+    net.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for inputs, labels in data_loader:
+            # move data to proper dtype and device
+            inputs = inputs.to(dtype=dtype, device=device)
+            labels = labels.to(device=device)
+            outputs = net(inputs)
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    return correct / total
+
+
 """
 Code block taken from https://ax.dev/tutorials/tune_cnn.html
 
@@ -134,12 +240,12 @@ def train_evaluate(parameterization):
 
 def post_slack_message(message):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='#dl-model-progress', text=message)
+        client.chat_postMessage(channel=slack_channel, text=message)
 
 
 def post_slack_file(file_name):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.files_upload(channels='#dl-model-progress', file=file_name, filename=file_name)
+        client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
 
 
 if __name__ == '__main__':
@@ -148,6 +254,10 @@ if __name__ == '__main__':
 
     # Collect arguments from command-line options
     args = parser.parse_args()
+
+    # Set slack channel
+    slack_channel = '#dl-model-progress'
+    # slack_channel = '#temp'
 
     # Load the parameters from json file
     json_path = os.path.join(args.model_dir, 'params.json')
@@ -164,7 +274,8 @@ if __name__ == '__main__':
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
         with open(json_path) as f:
             params_text = json.load(f)
-        post_slack_message("Hyperparameter tuning started for experiment: {}".format(args.model_dir))
+        post_slack_message("Hyperparameter tuning started for experiment: {}\n"
+                           "With parameters:{}".format(args.model_dir, params_text))
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'hyperparameter_tuning.log'))
@@ -178,8 +289,10 @@ if __name__ == '__main__':
     model_name = params.model_name
     num_classes = 196
     batch_size = params.batch_size
-    num_epochs = params.num_epochs
     feature_extract = params.feature_extract
+    num_workers = params.num_workers
+    optimizer_selected = params.optimizer
+    learning_rate = params.learning_rate
 
     model, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
 
@@ -208,7 +321,7 @@ if __name__ == '__main__':
     # Create training and validation dataloaders
     dataloaders_dict = {
         x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batch_size, shuffle=True,
-                                       num_workers=params.num_workers) for x in ['train', 'val']}
+                                       num_workers=num_workers) for x in ['train', 'val']}
 
     # #####################################################################
     # Code block taken from https://ax.dev/tutorials/tune_cnn.html
@@ -216,21 +329,35 @@ if __name__ == '__main__':
     # Run the optimization loop
     # Here, we set the bounds on the learning rate and momentum and set the parameter space for the learning rate to
     # be on a log scale.
-
-    best_parameters, values, experiment, model = optimize(
-        parameters=[
+    parameters = []
+    if optimizer_selected == 'sgd':
+        parameters = [
             {"name": "lr", "type": "range", "bounds": [1e-6, 0.4], "log_scale": True},
             {"name": "momentum", "type": "range", "bounds": [0.0, 1.0]},
-        ],
+        ]
+    elif optimizer_selected == 'adam':
+        parameters = [
+            {"name": "lr", "type": "range", "bounds": [1e-6, 0.4], "log_scale": True},
+            {"name": "eps", "type": "range", "bounds": [1e-8, 1.0]},
+        ]
+    else:
+        logging.info("Invalid optimizer name, exiting...")
+        exit()
+
+    best_parameters, values, experiment, model = optimize(
+        parameters=parameters,
         evaluation_function=train_evaluate,
-        objective_name='accuracy'
+        objective_name='accuracy',
     )
 
     optimal_lr = best_parameters['lr']
-    optimal_momentum = best_parameters['momentum']
-
     logging.info('Optimal learning rate is: {}'.format(optimal_lr))
-    logging.info('Optimal momentum is: {}'.format(optimal_momentum))
+    if optimizer_selected == 'sgd':
+        optimal_momentum = best_parameters['momentum']
+        logging.info('Optimal momentum is: {}'.format(optimal_momentum))
+    elif optimizer_selected == 'adam':
+        optimal_eps = best_parameters['eps']
+        logging.info('Optimal eps is: {}'.format(optimal_eps))
 
     means, covariances = values
 
@@ -246,7 +373,10 @@ if __name__ == '__main__':
     #
     # The black squares show points that we have actually run, notice how they are clustered in the optimal region.
 
-    plot_config = plot_contour(model=model, param_x='lr', param_y='momentum', metric_name='accuracy')
+    if optimizer_selected == 'sgd':
+        plot_config = plot_contour(model=model, param_x='lr', param_y='momentum', metric_name='accuracy')
+    elif optimizer_selected == 'adam':
+        plot_config = plot_contour(model=model, param_x='lr', param_y='eps', metric_name='accuracy')
 
     # create an Ax report
     with open(os.path.join(args.model_dir, 'plot_response_surface_image.html'), 'w') as outfile:
@@ -282,11 +412,19 @@ if __name__ == '__main__':
 
     # save optimal parameters to params.json
     params.learning_rate = optimal_lr
-    params.momentum = optimal_momentum
+    if optimizer_selected == 'sgd':
+        params.momentum = optimal_momentum
+    elif optimizer_selected == 'adam':
+        params.eps = optimal_eps
     params.save(json_path)
 
     # save html files as images
-    post_slack_message('Optimization completed\nBest learning rate: {}\n'
-                       'Best momentum: {}'.format(optimal_lr, optimal_momentum))
+    if optimizer_selected == 'sgd':
+        post_slack_message('Optimization completed\nBest learning rate: {}\n'
+                           'Best momentum: {}'.format(optimal_lr, optimal_momentum))
+    elif optimizer_selected == 'adam':
+        post_slack_message('Optimization completed\nBest learning rate: {}\n'
+                           'Best eps: {}'.format(optimal_lr, optimal_eps))
+
     post_slack_file(os.path.join(args.model_dir, 'plot_response_surface_image.html'))
     post_slack_file(os.path.join(args.model_dir, 'best_objective_plot.html'))
