@@ -18,6 +18,7 @@ import logging
 import os
 import slack
 import json
+import time
 
 import utils
 
@@ -114,11 +115,11 @@ def set_parameter_requires_grad(model, feature_extracting):
 
 
 def train(
-    net: torch.nn.Module,
-    train_loader: DataLoader,
-    parameters: Dict[str, float],
-    dtype: torch.dtype,
-    device: torch.device,
+        net: torch.nn.Module,
+        train_loader: DataLoader,
+        parameters: Dict[str, float],
+        dtype: torch.dtype,
+        device: torch.device,
 ) -> nn.Module:
     """
     Train CNN on provided data set.
@@ -187,7 +188,7 @@ def train(
 
 
 def evaluate(
-    net: nn.Module, data_loader: DataLoader, dtype: torch.dtype, device: torch.device
+        net: nn.Module, data_loader: DataLoader, dtype: torch.dtype, device: torch.device
 ) -> float:
     """
     Compute classification accuracy on provided dataset.
@@ -344,11 +345,13 @@ if __name__ == '__main__':
         logging.info("Invalid optimizer name, exiting...")
         exit()
 
+    since = time.time()
     best_parameters, values, experiment, model = optimize(
         parameters=parameters,
         evaluation_function=train_evaluate,
         objective_name='accuracy',
     )
+    time_elapsed = time.time() - since
 
     optimal_lr = best_parameters['lr']
     logging.info('Optimal learning rate is: {}'.format(optimal_lr))
@@ -419,12 +422,20 @@ if __name__ == '__main__':
     params.save(json_path)
 
     # save html files as images
+    message_text = ''
     if optimizer_selected == 'sgd':
-        post_slack_message('Optimization completed\nBest learning rate: {}\n'
-                           'Best momentum: {}'.format(optimal_lr, optimal_momentum))
+        message_text = 'Optimization complete in {:.0f}m {:.0f}s\n' \
+                       'Best learning rate: {}\n' \
+                       'Best momentum: {}'.format(time_elapsed // 60, time_elapsed % 60,
+                                                  optimal_lr, optimal_momentum,)
     elif optimizer_selected == 'adam':
-        post_slack_message('Optimization completed\nBest learning rate: {}\n'
-                           'Best eps: {}'.format(optimal_lr, optimal_eps))
+        message_text = 'Optimization complete in {:.0f}m {:.0f}s\n' \
+                       'Best learning rate: {}\n' \
+                       'Best eps: {}'.format(time_elapsed // 60, time_elapsed % 60,
+                                             optimal_lr, optimal_eps,)
+
+    logging.info(message_text)
+    post_slack_message(message_text)
 
     post_slack_file(os.path.join(args.model_dir, 'plot_response_surface_image.html'))
     post_slack_file(os.path.join(args.model_dir, 'best_objective_plot.html'))
