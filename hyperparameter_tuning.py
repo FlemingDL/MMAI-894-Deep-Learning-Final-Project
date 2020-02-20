@@ -275,10 +275,6 @@ if __name__ == '__main__':
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-        with open(json_path) as f:
-            params_text = json.load(f)
-        post_slack_message("Hyperparameter tuning started for experiment: {}\n"
-                           "With parameters:{}".format(args.model_dir, params_text))
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'hyperparameter_tuning.log'))
