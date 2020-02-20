@@ -13,7 +13,6 @@ import utils
 import ssl
 from tqdm import tqdm
 import slack
-import json
 import shutil
 import matplotlib.pyplot as plt
 import numpy as np

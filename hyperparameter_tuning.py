@@ -421,7 +421,6 @@ if __name__ == '__main__':
         params.eps = optimal_eps
     params.save(json_path)
 
-    # save html files as images
     message_text = ''
     if optimizer_selected == 'sgd':
         message_text = 'Optimization complete in {:.0f}m {:.0f}s\n' \
@@ -437,5 +436,5 @@ if __name__ == '__main__':
     logging.info(message_text)
     post_slack_message(message_text)
 
-    post_slack_file(os.path.join(args.model_dir, 'plot_response_surface_image.html'))
-    post_slack_file(os.path.join(args.model_dir, 'best_objective_plot.html'))
+    # post_slack_file(os.path.join(args.model_dir, 'plot_response_surface_image.html'))
+    # post_slack_file(os.path.join(args.model_dir, 'best_objective_plot.html'))
