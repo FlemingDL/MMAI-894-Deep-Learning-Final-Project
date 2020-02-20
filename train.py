@@ -54,7 +54,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     best_acc = 0.0
 
     # Create slack progress bar
-    pbar = create_slack_progress_bar()
+    # pbar = create_slack_progress_bar()
 
     # Initialize slack image upload response
     slack_loss_img_response = None
@@ -64,7 +64,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
         logging.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
         logging.info('-' * 10)
 
-        update_slack_progress_bar(pbar, epoch, num_epochs)
+        # update_slack_progress_bar(pbar, epoch, num_epochs)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -143,7 +143,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
         print('')
 
-    log_message_to_slack_progress_bar(pbar, 'Epochs completed')
+    # log_message_to_slack_progress_bar(pbar, 'Epochs completed')
 
     time_elapsed = time.time() - since
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
