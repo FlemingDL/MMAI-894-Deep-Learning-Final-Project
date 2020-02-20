@@ -13,11 +13,11 @@ import utils
 import ssl
 from tqdm import tqdm
 import slack
-from slack_progress import SlackProgress
 import json
 import shutil
 import matplotlib.pyplot as plt
 import numpy as np
+from joke.jokes import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -53,18 +53,35 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     best_model_wts = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    # Create slack progress bar
-    # pbar = create_slack_progress_bar()
-
-    # Initialize slack image upload response
+    # Initialize slack image upload and message response
     slack_loss_img_response = None
     slack_acc_img_response = None
+    slack_epoch_status_response = None
+    epoch_time_elapsed = []
 
     for epoch in range(num_epochs):
         logging.info('Epoch {}/{}'.format(epoch, num_epochs - 1))
         logging.info('-' * 10)
 
+        epoch_start = time.time()
+
+        joke = chucknorris()
+        if epoch == 0:
+            epoch_status_message = 'Just getting started. Chuck is not here yet...' + joke
+        else:
+            ave_epoch_time = np.mean(epoch_time_elapsed)
+            est_time_to_go = ave_epoch_time * (num_epochs - epoch) + ave_epoch_time
+            epoch_status_message = 'Epoch {}/{}.\n' \
+                                   'Est time to go {:.0f}m {:.0f}s\n' \
+                                   'Just wait until check gets here...{}'.format(epoch + 1,
+                                                                                 num_epochs,
+                                                                                 est_time_to_go // 60,
+                                                                                 est_time_to_go % 60,
+                                                                                 joke)
+
         # update_slack_progress_bar(pbar, epoch, num_epochs)
+        slack_epoch_status_response = post_slack_message(epoch_status_message,
+                                                         slack_epoch_status_response)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -141,9 +158,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                                                                              'Accuracy Per Epoch'),
                                                      slack_acc_img_response)
 
-        print('')
+        epoch_time_elapsed.append(time.time() - epoch_start)
 
-    # log_message_to_slack_progress_bar(pbar, 'Epochs completed')
+        print('')
 
     time_elapsed = time.time() - since
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
@@ -271,41 +288,39 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
     return model_ft, input_size
 
 
-def post_slack_message(message):
+def post_slack_message(message, response=None):
     if 'SLACK_API_TOKEN' in os.environ:
-        return client.chat_postMessage(channel=slack_channel, text=message)
+        if response is None:
+            try:
+                response = client.chat_postMessage(channel=slack_channel, text=message)
+            except:
+                logging.info('Error posting message to slack')
+        else:
+            response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
+
+        return response
 
 
 def post_slack_file(file_name, response=None):
     if 'SLACK_API_TOKEN' in os.environ:
         if response is None:
-            return client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            try:
+                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            except:
+                logging.info('Error uploading file to slack')
         else:
             delete_slack_file(response)
-            return client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            try:
+                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            except:
+                logging.info('Error uploading file to slack')
+
+        return response
 
 
 def delete_slack_file(response):
     if 'SLACK_API_TOKEN' in os.environ:
         client.files_delete(file=response['file']['id'])
-
-
-def create_slack_progress_bar():
-    if 'SLACK_API_TOKEN' in os.environ:
-        pbar = sp.new()
-    else:
-        pbar = None
-    return pbar
-
-
-def update_slack_progress_bar(pbar, position, total):
-    if 'SLACK_API_TOKEN' in os.environ:
-        pbar.pos = int(position / total * 100)
-
-
-def log_message_to_slack_progress_bar(pbar, message):
-    if 'SLACK_API_TOKEN' in os.environ:
-        pbar.log(message)
 
 
 def create_line_graph_image(y1, y2, y1_name, y2_name, title):
@@ -344,11 +359,6 @@ if __name__ == '__main__':
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-        with open(json_path) as f:
-            params_text = json.load(f)
-        post_slack_message("New training started\nExperiment is: {}\n"
-                           "With parameters:{}".format(args.model_dir, params_text))
-        sp = SlackProgress(os.environ['SLACK_API_TOKEN'], slack_channel)
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
@@ -364,6 +374,13 @@ if __name__ == '__main__':
 
     # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
     model_name = params.model_name
+    # Optimizer selected.  Choose from [sgd, adam]
+    optimizer_selected = params.optimizer
+    learning_rate = params.learning_rate
+    momentum = params.momentum
+    eps = params.eps
+    train_data_split = params.train_data_split
+    images_cropped = params.crop_images_to_bounding_box
 
     # Number of classes in the dataset
     num_classes = 196
@@ -377,6 +394,17 @@ if __name__ == '__main__':
     # Flag for feature extracting. When False, we finetune the whole model,
     #   when True we only update the reshaped layer params
     feature_extract = params.feature_extract
+
+    slack_message = "New training started\n" \
+                    "Experiment is {}. The parameters are...model: {}, optimizer: {}, learning rate: {}, " \
+                    "momentum: {}, eps: {}, batch size: {}, number of epochs: {}, train and val data split: {}, " \
+                    "images cropped to bounding box: {}\n" \
+                    "We will need to call in Chuck Norris for this one...".format(os.path.basename(args.model_dir),
+                                                                                  model_name, optimizer_selected,
+                                                                                  learning_rate, momentum, eps,
+                                                                                  batch_size, num_epochs,
+                                                                                  train_data_split, images_cropped)
+    post_slack_message(slack_message)
 
     ######################################################################
     # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
@@ -465,11 +493,11 @@ if __name__ == '__main__':
                 print("\t", name)
 
     # Observe that all parameters are being optimized
-    if params.optimizer == 'sgd':
-        optimizer_ft = optim.SGD(params_to_update, lr=params.learning_rate, momentum=params.momentum)
+    if optimizer_selected == 'sgd':
+        optimizer_ft = optim.SGD(params_to_update, lr=learning_rate, momentum=momentum)
 
-    elif params.optimizer == 'adam':
-        optimizer_ft = optim.Adam(params_to_update, lr=params.learning_rate)
+    elif optimizer_selected == 'adam':
+        optimizer_ft = optim.Adam(params_to_update, lr=learning_rate, eps=eps)
 
     else:
         logging.info("Invalid optimizer name, exiting...")
