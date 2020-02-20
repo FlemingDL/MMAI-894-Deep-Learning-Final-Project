@@ -19,6 +19,8 @@ import os
 import slack
 import json
 import time
+from joke.jokes import *
+import markdown_strings as ms
 
 import utils
 
@@ -295,6 +297,15 @@ if __name__ == '__main__':
     optimizer_selected = params.optimizer
     learning_rate = params.learning_rate
 
+    joke = ms.esc_format(chucknorris())
+    slack_message = "*New Hyperparameter Tuning Started* {}\n>" \
+                    "The parameters are...model: *{}*, optimizer: *{}*, batch size: {}.\n" \
+                    "This will optimize learning rate and eps if Adam or momentum if SGD." \
+                    "Chuck Norris's agent said he was too " \
+                    "busy for this job, but to remember...{}".format(args.model_dir, model_name, optimizer_selected,
+                                                                     batch_size, joke)
+    post_slack_message(slack_message)
+
     model, input_size = initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
 
     print('Load data...')
@@ -426,12 +437,12 @@ if __name__ == '__main__':
         message_text = 'Optimization complete in {:.0f}m {:.0f}s\n' \
                        'Best learning rate: {}\n' \
                        'Best momentum: {}'.format(time_elapsed // 60, time_elapsed % 60,
-                                                  optimal_lr, optimal_momentum,)
+                                                  optimal_lr, optimal_momentum, )
     elif optimizer_selected == 'adam':
         message_text = 'Optimization complete in {:.0f}m {:.0f}s\n' \
                        'Best learning rate: {}\n' \
                        'Best eps: {}'.format(time_elapsed // 60, time_elapsed % 60,
-                                             optimal_lr, optimal_eps,)
+                                             optimal_lr, optimal_eps, )
 
     logging.info(message_text)
     post_slack_message(message_text)
