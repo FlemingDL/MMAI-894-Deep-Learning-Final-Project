@@ -18,6 +18,7 @@ import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 from joke.jokes import *
+import markdown_strings as ms
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -65,13 +66,13 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
         epoch_start = time.time()
 
-        joke = chucknorris()
+        joke = ms.esc_format(chucknorris())
         if epoch == 0:
             epoch_status_message = 'Just getting started. Chuck is not here yet...' + joke
         else:
             ave_epoch_time = np.mean(epoch_time_elapsed)
             est_time_to_go = ave_epoch_time * (num_epochs - epoch) + ave_epoch_time
-            epoch_status_message = 'Epoch {}/{}.\n' \
+            epoch_status_message = '*Epoch {}/{}.*\n>' \
                                    'Est time to go {:.0f}m {:.0f}s\n' \
                                    'Just wait until Chuck gets here...{}'.format(epoch + 1,
                                                                                  num_epochs,
@@ -296,7 +297,11 @@ def post_slack_message(message, response=None):
             except:
                 logging.info('Error posting message to slack')
         else:
-            response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
+            delete_slack_message(response)
+            try:
+                response = client.chat_postMessage(channel=slack_channel, text=message)
+            except:
+                logging.info('Error posting message to slack')
 
         return response
 
@@ -316,6 +321,14 @@ def post_slack_file(file_name, response=None):
                 logging.info('Error uploading file to slack')
 
         return response
+
+
+def delete_slack_message(response):
+    if 'SLACK_API_TOKEN' in os.environ:
+        try:
+            client.chat_delete(channel=response['channel'], ts=response['ts'])
+        except:
+            logging.info('Error deleting message')
 
 
 def delete_slack_file(response):
@@ -395,11 +408,11 @@ if __name__ == '__main__':
     #   when True we only update the reshaped layer params
     feature_extract = params.feature_extract
 
-    slack_message = "New training started\n" \
-                    "Experiment is {}. The parameters are...model: {}, optimizer: {}, learning rate: {}, " \
+    slack_message = "*New Training Started* {}\n>" \
+                    "The parameters are...model: *{}*, optimizer: *{}*, learning rate: {}, " \
                     "momentum: {}, eps: {}, batch size: {}, number of epochs: {}, train and val data split: {}, " \
                     "images cropped to bounding box: {}\n" \
-                    "We will need to call in Chuck Norris for this one...".format(os.path.basename(args.model_dir),
+                    "We will need to call in Chuck Norris for this one...".format(args.model_dir,
                                                                                   model_name, optimizer_selected,
                                                                                   learning_rate, momentum, eps,
                                                                                   batch_size, num_epochs,
