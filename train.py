@@ -73,7 +73,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
             est_time_to_go = ave_epoch_time * (num_epochs - epoch) + ave_epoch_time
             epoch_status_message = 'Epoch {}/{}.\n' \
                                    'Est time to go {:.0f}m {:.0f}s\n' \
-                                   'Just wait until check gets here...{}'.format(epoch + 1,
+                                   'Just wait until Chuck gets here...{}'.format(epoch + 1,
                                                                                  num_epochs,
                                                                                  est_time_to_go // 60,
                                                                                  est_time_to_go % 60,
