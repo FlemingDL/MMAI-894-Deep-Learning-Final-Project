@@ -297,9 +297,8 @@ def post_slack_message(message, response=None):
             except:
                 logging.info('Error posting message to slack')
         else:
-            delete_slack_message(response)
             try:
-                response = client.chat_postMessage(channel=slack_channel, text=message)
+                response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
             except:
                 logging.info('Error posting message to slack')
 
