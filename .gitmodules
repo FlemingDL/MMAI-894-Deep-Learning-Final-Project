@@ -1,0 +1,3 @@
+[submodule "Xception-PyTorch"]
+	path = Xception-PyTorch
+	url = https://github.com/tstandley/Xception-PyTorch.git
