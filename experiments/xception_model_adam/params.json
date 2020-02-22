@@ -1,6 +1,6 @@
 {
     "model_name": "xception",
-    "batch_size": 64,
+    "batch_size": 32,
     "num_epochs": 100,
     "feature_extract": false,
     "num_workers": 4,
