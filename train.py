@@ -286,8 +286,9 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
         """ Xception
         Be careful, expects (299,299) sized images and has auxiliary output
         """
-        model_ft = xception.xception(pretrained=use_pretrained, num_classes=num_classes)
+        model_ft = xception.xception(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
+        model_ft.fc = nn.Linear(1000, num_classes)
         input_size = 299
 
     else:
