@@ -5,7 +5,6 @@ import torch
 import slack
 import os
 import utils
-import json
 from torchvision import transforms, datasets
 import pandas as pd
 import logging
@@ -52,14 +51,10 @@ def input_size_of_model(model_name):
     return input_size
 
 
-def load_checkpoint(filepath, device, inference=False):
+def load_checkpoint(filepath, device):
     checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'), map_location=str(device))
     torch.load
     model = checkpoint['model']
-    if inference:
-        for parameter in model.parameter():
-            parameter.require_grad = False
-        model.eval()
     return model
 
 
@@ -130,15 +125,11 @@ if __name__ == '__main__':
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-        with open(json_path) as f:
-            params_text = json.load(f)
-        post_slack_message("Testing model for experiment: {}\n"
-                           "The parameters used in training were:{}".format(args.model_dir, params_text))
 
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'test.log'))
 
-    slack_message = "*Testing of {} Model Started*".format(args.model_dir),
+    slack_message = "*Testing of {} Model Started*".format(args.model_dir)
     post_slack_message(slack_message)
 
     # Set variables
@@ -163,7 +154,7 @@ if __name__ == '__main__':
 
     # Load the model
     logging.info('Loading saved model')
-    model_ft = load_checkpoint(filepath=args.model_dir, device=device, inference=True)
+    model_ft = load_checkpoint(filepath=args.model_dir, device=device)
 
     # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
@@ -173,6 +164,9 @@ if __name__ == '__main__':
 
     # Create test dataloaders
     test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
+
+    # Set model to evaluate
+    model_ft.eval()
 
     # Get the car name lookup table
     devkit = 'devkit'
