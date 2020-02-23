@@ -123,24 +123,16 @@ if __name__ == '__main__':
     # Set model to evaluate
     model_ft.eval()
 
-    image_paths = []
     predictions = []
 
-    for inputs, _, paths in test_data_loader:
+    for inputs, _ in test_data_loader:
         torch.no_grad()
         inputs = inputs.to(device)
         outputs = model_ft(inputs)
         _, pred = torch.max(outputs, 1)
 
-        print('image paths: {}'.format(paths))
-        image_paths.append(paths)
         print('prediction: {}'.format(pred))
         predictions.append(pred + 1)
-
-    # save the image paths
-    image_paths_file = os.path.join(args.model_dir, 'image_paths_file.csv')
-    df = pd.DataFrame(data=image_paths)
-    df.to_csv(image_paths_file, index=None, header=False)
 
     # save the predictions
     predictions_file = os.path.join(args.model_dir, 'predictions_file.csv')
