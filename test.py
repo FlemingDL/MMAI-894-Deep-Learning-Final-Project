@@ -185,6 +185,7 @@ if __name__ == '__main__':
     car_names = []
 
     logging.info('Predicting cars')
+    since = 0
     for inputs, _ in tqdm(test_data_loader):
         since = time.time()
 
@@ -200,8 +201,7 @@ if __name__ == '__main__':
             car_names.append(cars_classid_to_name.iloc[prediction]['name'])
 
     time_elapsed = time.time() - since
-    message = 'Predicting complete in {:.0f}m {:.0f}s on device:{}'.format(time_elapsed // 60,
-                                                                           time_elapsed % 60, str(device))
+    message = 'Prediction complete in {:.0f}s on device:{}'.format(time_elapsed, str(device))
     logging.info(message)
     post_slack_message(message)
 
@@ -215,9 +215,8 @@ if __name__ == '__main__':
     df['predicted_car_name'] = car_names
 
     df[['file_name', 'predicted_car_name']].to_csv(predictions_file, index=None)
-    df['predicted_car_name'].to_csv(submission_file, index=None, header=None)
+    df['predicted_class_id'].to_csv(submission_file, index=None, header=None)
 
-    post_slack_message('Here are the results from the test set:')
     post_slack_file(predictions_file)
     post_slack_file(submission_file)
     logging.info('Done testing!')
