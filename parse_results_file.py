@@ -1,9 +1,10 @@
+"""This file parses the .mat file returned from the Cars 196 Submission site"""
 import argparse
 import scipy.io as spio
 import pandas as pd
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--file_path', help="The path file of the response file")
+parser.add_argument('--file_path', help="The path of the response file")
 
 if __name__ == '__main__':
 
