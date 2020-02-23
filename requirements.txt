@@ -1,7 +1,6 @@
 markdown_strings
 axju-jokes
 matplotlib
-ax-platform
 pandas
 slack-progress
 slackclient

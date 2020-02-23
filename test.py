@@ -26,6 +26,9 @@ def input_size_of_model(model_name):
     if model_name == "resnet":
         input_size = 224
 
+    elif model_name == "resnet152":
+        input_size = 224
+
     elif model_name == "alexnet":
         input_size = 224
 

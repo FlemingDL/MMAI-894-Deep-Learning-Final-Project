@@ -48,27 +48,26 @@ To run for a specific experiment:
 $ python preprocess.py --model_dir 'experiments/<directory name>'
 ```
 
-### Hyperparameter Tune
-This python file runs hyperparameter tuning on learning rate and momentum using Ax https://ax.dev.  The optimal 
-learning rate and momentum will be saved to the params.json file in the experiment folder.
-```bash
-$ python hyperparameter_tuning.py
-```
-To run for a specific experiment:
- ```bash
-$ python hyperparameter_tuning.py --model_dir 'experiments/<directory name>'
-```
-
 ### Train
 The default experiment is in './experiments/base_model'.  In this folder is a set of training parameters in
 'params.json'.  To run this experiment, run: 
 ```bash
 $ python train.py
 ```
-To create new experiment, create a new directory in './experiments/', create new parameters saved in a 'params.json'
-file in your new directory.  Then run:
+To create a new experiment, create a new directory in './experiments/', copy the 'params.json' file from 
+'./experiments/base_model' to your new directory.  Edit the parameters in the params.json file in your new 
+directory.  Then run:
 ```bash
 $ python train.py --model_dir <new directory path>
 ```
+
+
+### Test
+To create a submission file to the Stanford Cars 196 Submission Site, run:
+```bash
+$ python test.py --model_dir <new directory path>
+```
+A file called 'submit_to_stanford_prediction.txt' will be produced in your experiment directory.  This file
+is formatted for submission. 
 
 When you're done working on the project, deactivate the virtual environment with `deactivate`.
