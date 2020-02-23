@@ -91,7 +91,7 @@ if __name__ == '__main__':
     # Set variables
     data_dir = "./data/"
     model_name = params.model_name
-    batch_size = params.batch_size
+    batch_size = params.test_batch_size
     num_workers = params.num_workers
 
     # Get the required input size of the network for resizing images
