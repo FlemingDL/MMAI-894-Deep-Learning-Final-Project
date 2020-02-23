@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from joke.jokes import *
 import markdown_strings as ms
-import Xception_PyTorch.xception as xception
+import models.xception as xception
 
 
 parser = argparse.ArgumentParser()
