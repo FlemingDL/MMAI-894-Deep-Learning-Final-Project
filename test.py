@@ -9,6 +9,9 @@ import json
 from torchvision import transforms, datasets
 import pandas as pd
 import logging
+from tqdm import tqdm
+from pathlib import Path
+import scipy.io as spio
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -120,25 +123,43 @@ if __name__ == '__main__':
     # Create test dataloaders
     test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
 
+    # Get the car name lookup table
+    devkit = 'devkit'
+    cars_meta_data = spio.loadmat(os.path.join(devkit, 'cars_meta.mat'))
+    cars_classid_to_name = [c for c in cars_meta_data['class_names'][0]]
+    cars_classid_to_name = pd.DataFrame(cars_classid_to_name, columns=['name'])
+
+    # Get the file names of images
+    image_names = []
+    for index in test_data_loader.dataset.imgs:
+        image_names.append(Path(index[0]).stem)
+
+    # Initialize lists
+    file_names = []
+    predictions = []
+    car_names = []
+
     # Set model to evaluate
     model_ft.eval()
 
-    predictions = []
-
-    for inputs, _ in test_data_loader:
+    for inputs, _ in tqdm(test_data_loader):
         torch.no_grad()
         inputs = inputs.to(device)
         outputs = model_ft(inputs)
         _, pred = torch.max(outputs, 1)
 
-        print('prediction: {}'.format(pred))
-        predictions.append(pred + 1)
+        for i in range(len(inputs)):
+            file_names.append(image_names[i])
+            predictions.append(int(pred[i] + 1))
+            car_names.append(cars_classid_to_name.iloc[pred[i]]['name'])
 
     # save the predictions
-    predictions_file = os.path.join(args.model_dir, 'predictions_file.csv')
-    df = pd.DataFrame(data=predictions)
-    df.to_csv(predictions_file, index=None, header=False)
-
+    predictions_file = os.path.join(args.model_dir, 'predictions_file.txt')
+    df = pd.DataFrame()
+    df['file_name'] = file_names
+    df['predicted_class_id'] = predictions
+    df['predicted_car_name'] = car_names
+    df.to_csv(predictions_file, index=None)
     print('Done testing!')
 
 
