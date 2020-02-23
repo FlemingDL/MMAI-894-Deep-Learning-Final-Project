@@ -189,6 +189,7 @@ if __name__ == '__main__':
 
     logging.info('Predicting cars')
     since = time.time()
+    img_name_index = 0
     for inputs, _ in tqdm(test_data_loader):
 
         torch.no_grad()
@@ -197,10 +198,11 @@ if __name__ == '__main__':
         _, pred = torch.max(outputs, 1)
 
         for i in range(len(inputs)):
-            file_names.append(image_names[i])
+            file_names.append(image_names[img_name_index])
             prediction = int(pred[i])
             predictions.append(prediction + 1)
             car_names.append(cars_classid_to_name.iloc[prediction]['name'])
+            img_name_index += 1
 
     time_elapsed = time.time() - since
     message = 'Prediction complete in {:.0f}s on device:{}'.format(time_elapsed, str(device))
