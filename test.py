@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'test.log'))
 
-    slack_message = "*Testing of {} Model Started*".format(args.model_dir)
+    slack_message = "*Testing of {} started*".format(args.model_dir)
     post_slack_message(slack_message)
 
     # Set variables
@@ -185,9 +185,8 @@ if __name__ == '__main__':
     car_names = []
 
     logging.info('Predicting cars')
-    since = 0
+    since = time.time()
     for inputs, _ in tqdm(test_data_loader):
-        since = time.time()
 
         torch.no_grad()
         inputs = inputs.to(device)
