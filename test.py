@@ -150,7 +150,8 @@ if __name__ == '__main__':
 
         for i in range(len(inputs)):
             file_names.append(image_names[i])
-            predictions.append(int(pred[i] + 1))
+            prediction = pred[i]
+            predictions.append(prediction.item() + 1)
             car_names.append(cars_classid_to_name.iloc[pred[i]]['name'])
 
     # save the predictions
