@@ -12,6 +12,7 @@ import logging
 from tqdm import tqdm
 from pathlib import Path
 import scipy.io as spio
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -52,7 +53,8 @@ def input_size_of_model(model_name):
 
 
 def load_checkpoint(filepath, device, inference=False):
-    checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'))
+    checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'), map_location=str(device))
+    torch.load
     model = checkpoint['model']
     if inference:
         for parameter in model.parameter():
@@ -61,12 +63,57 @@ def load_checkpoint(filepath, device, inference=False):
     return model
 
 
-def post_slack_message(message):
+def post_slack_message(message, response=None):
     if 'SLACK_API_TOKEN' in os.environ:
-        client.chat_postMessage(channel='CU3JRRA4E', text=message)
+        if response is None:
+            try:
+                response = client.chat_postMessage(channel=slack_channel, text=message)
+            except:
+                logging.info('Error posting message to slack')
+        else:
+            try:
+                response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
+            except:
+                logging.info('Error posting message to slack')
+
+        return response
+
+
+def post_slack_file(file_name, response=None):
+    if 'SLACK_API_TOKEN' in os.environ:
+        if response is None:
+            try:
+                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            except:
+                logging.info('Error uploading file to slack')
+        else:
+            delete_slack_file(response)
+            try:
+                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
+            except:
+                logging.info('Error uploading file to slack')
+
+        return response
+
+
+def delete_slack_message(response):
+    if 'SLACK_API_TOKEN' in os.environ:
+        try:
+            client.chat_delete(channel=response['channel'], ts=response['ts'])
+        except:
+            logging.info('Error deleting message')
+
+
+def delete_slack_file(response):
+    if 'SLACK_API_TOKEN' in os.environ:
+        client.files_delete(file=response['file']['id'])
 
 
 if __name__ == '__main__':
+
+    # Set slack channel
+    slack_channel = '#dl-model-progress'
+    # slack_channel = '#temp'
 
     # Collect arguments from command-line options
     args = parser.parse_args()
@@ -91,6 +138,9 @@ if __name__ == '__main__':
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'test.log'))
 
+    slack_message = "*Testing of {} Model Started*".format(args.model_dir),
+    post_slack_message(slack_message)
+
     # Set variables
     data_dir = "./data/"
     model_name = params.model_name
@@ -112,7 +162,8 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Load the model
-    model_ft = load_checkpoint(filepath=args.model_dir, device=device)
+    logging.info('Loading saved model')
+    model_ft = load_checkpoint(filepath=args.model_dir, device=device, inference=True)
 
     # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
@@ -139,10 +190,10 @@ if __name__ == '__main__':
     predictions = []
     car_names = []
 
-    # Set model to evaluate
-    model_ft.eval()
-
+    logging.info('Predicting cars')
     for inputs, _ in tqdm(test_data_loader):
+        since = time.time()
+
         torch.no_grad()
         inputs = inputs.to(device)
         outputs = model_ft(inputs)
@@ -154,14 +205,25 @@ if __name__ == '__main__':
             predictions.append(prediction + 1)
             car_names.append(cars_classid_to_name.iloc[prediction]['name'])
 
+    time_elapsed = time.time() - since
+    message = 'Predicting complete in {:.0f}m {:.0f}s on device:{}'.format(time_elapsed // 60,
+                                                                           time_elapsed % 60, str(device))
+    logging.info(message)
+    post_slack_message(message)
+
     # save the predictions
-    predictions_file = os.path.join(args.model_dir, 'predictions_file.txt')
+    predictions_file = os.path.join(args.model_dir, 'file_name_prediction.txt')
+    submission_file = os.path.join(args.model_dir, 'submit_to_stanford_prediction.txt')
+
     df = pd.DataFrame()
     df['file_name'] = file_names
     df['predicted_class_id'] = predictions
     df['predicted_car_name'] = car_names
-    df.to_csv(predictions_file, index=None)
-    print('Done testing!')
 
+    df[['file_name', 'predicted_car_name']].to_csv(predictions_file, index=None)
+    df['predicted_car_name'].to_csv(submission_file, index=None, header=None)
 
-
+    post_slack_message('Here are the results from the test set:')
+    post_slack_file(predictions_file)
+    post_slack_file(submission_file)
+    logging.info('Done testing!')
