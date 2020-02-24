@@ -1,5 +1,5 @@
-# 894_DeepLearning_final_project_v2
-This is team fleming's deep learning final project version 2.  Code is written for Python 3.
+# MMAI-894-Deep-Learning-Final-Project
+This is team fleming's deep learning final.  Code is written for Python 3.
 
 ## Getting Started
 Clone this repository
