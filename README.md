@@ -1,4 +1,4 @@
-# MMAI-894-Deep-Learning-Final-Project
+# Team Fleming MMAI 894 Deep Learning Final Project
 This is team fleming's deep learning final.  Code is written for Python 3.
 
 ## Getting Started
