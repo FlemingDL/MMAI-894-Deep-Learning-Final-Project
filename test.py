@@ -218,7 +218,7 @@ if __name__ == '__main__':
     df['predicted_class_id'] = predictions
     df['predicted_car_name'] = car_names
 
-    df[['file_name', 'predicted_car_name']].to_csv(predictions_file, index=None)
+    df[['file_name', 'predicted_class_id', 'predicted_car_name']].to_csv(predictions_file, index=None)
     df['predicted_class_id'].to_csv(submission_file, index=None, header=None)
 
     post_slack_file(predictions_file)
