@@ -137,7 +137,9 @@ if __name__ == '__main__':
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'acc_by_class.log'))
 
-    slack_message = "*Calculating Accuracy by Class for {}*".format(args.model_dir)
+    slack_message = "*Producing Predictions Data Dump*\n>" \
+                    "Creating data files for predictions and " \
+                    "labels on the validation set for {}".format(args.model_dir)
     post_slack_message(slack_message)
 
     # Set variables
@@ -222,7 +224,7 @@ if __name__ == '__main__':
     time_elapsed = time.time() - since
     message = 'Prediction complete in {:.0f}s on device:{}'.format(time_elapsed, str(device))
     logging.info(message)
-    post_slack_message(message)
+    # post_slack_message(message)
 
     # save the predictions
     predictions_file = os.path.join(args.model_dir, 'predictions.csv')
