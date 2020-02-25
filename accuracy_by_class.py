@@ -14,9 +14,6 @@ from pathlib import Path
 import scipy.io as spio
 import time
 from operator import truediv
-from sklearn.metrics import confusion_matrix
-import matplotlib.pyplot as plt
-import itertools
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -113,48 +110,6 @@ def delete_slack_message(response):
 def delete_slack_file(response):
     if 'SLACK_API_TOKEN' in os.environ:
         client.files_delete(file=response['file']['id'])
-
-
-def plot_confusion_matrix(cm, class_names):
-    cmap = plt.get_cmap('Blues')
-
-    plt.figure(figsize=(8, 6))
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title('Confusion Matrix')
-    plt.colorbar()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45)
-    plt.yticks(tick_marks, class_names)
-
-    # Normalize
-    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-
-    thresh = cm.max() / 1.5
-
-    figure = plt.figure(figsize=(8, 8))
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-    plt.title("Confusion matrix")
-    plt.colorbar()
-    tick_marks = np.arange(len(class_names))
-    plt.xticks(tick_marks, class_names, rotation=45)
-    plt.yticks(tick_marks, class_names)
-
-    # Normalize the confusion matrix.
-    cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
-
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, "{:0.4f}".format(cm[i, j]),
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-
-    image_file = os.path.join(args.model_dir, "confusion_matrix.png")
-    plt.savefig(image_file)
-
-    return image_file
 
 
 if __name__ == '__main__':
@@ -270,29 +225,22 @@ if __name__ == '__main__':
     post_slack_message(message)
 
     # save the predictions
-    predictions_file = os.path.join(args.model_dir, 'predictions.txt')
-    class_acc_file = os.path.join(args.model_dir, 'class_accuracies.txt')
-    # confusion_matrix_file = os.path.join(args.model_dir, 'confusion_matrix.txt')
+    predictions_file = os.path.join(args.model_dir, 'predictions.csv')
+    class_acc_file = os.path.join(args.model_dir, 'class_accuracies.csv')
 
     df = pd.DataFrame()
     df['file_name'] = file_names
+    df['label_class_id'] = label_ids
+    df['label_class_name'] = label_names
     df['predicted_class_id'] = prediction_ids
     df['predicted_car_name'] = prediction_names
-    df['label_id'] = label_ids
-    df['label_name'] = label_names
 
     df_acc = pd.DataFrame()
     df_acc['class_names'] = cars_classid_to_name['name']
     df_acc['accuracy'] = list(map(truediv, class_correct, class_total))
 
-    # cm = confusion_matrix(label_ids, prediction_ids)
-    # cm_image_file = plot_confusion_matrix(cm, label_names)
-    # df_cm = pd.DataFrame(cm)
-    # df_cm = cm
-
     df.to_csv(predictions_file, index=None)
     df_acc.to_csv(class_acc_file)
-    # df_cm.to_csv(confusion_matrix_file, index=None)
 
     post_slack_file(predictions_file)
     post_slack_file(class_acc_file)
