@@ -272,7 +272,7 @@ if __name__ == '__main__':
     # save the predictions
     predictions_file = os.path.join(args.model_dir, 'predictions.txt')
     class_acc_file = os.path.join(args.model_dir, 'class_accuracies.txt')
-    confusion_matrix_file = os.path.join(args.model_dir, 'confusion_matrix.txt')
+    # confusion_matrix_file = os.path.join(args.model_dir, 'confusion_matrix.txt')
 
     df = pd.DataFrame()
     df['file_name'] = file_names
@@ -285,14 +285,14 @@ if __name__ == '__main__':
     df_acc['class_names'] = cars_classid_to_name['name']
     df_acc['accuracy'] = list(map(truediv, class_correct, class_total))
 
-    cm = confusion_matrix(label_ids, prediction_ids)
-    cm_image_file = plot_confusion_matrix(cm, label_names)
-    df_cm = pd.DataFrame(cm)
+    # cm = confusion_matrix(label_ids, prediction_ids)
+    # cm_image_file = plot_confusion_matrix(cm, label_names)
+    # df_cm = pd.DataFrame(cm)
     # df_cm = cm
 
     df.to_csv(predictions_file, index=None)
     df_acc.to_csv(class_acc_file)
-    df_cm.to_csv(confusion_matrix_file, index=None)
+    # df_cm.to_csv(confusion_matrix_file, index=None)
 
     post_slack_file(predictions_file)
     post_slack_file(class_acc_file)
