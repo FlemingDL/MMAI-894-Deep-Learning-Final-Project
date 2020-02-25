@@ -238,7 +238,7 @@ if __name__ == '__main__':
     df_acc['class_names'] = cars_classid_to_name['name']
     df_acc['accuracy'] = list(map(truediv, class_correct, class_total))
 
-    df[['file_name', 'predicted_class_id', 'predicted_car_name']].to_csv(predictions_file, index=None)
+    df.to_csv(predictions_file, index=None)
     df_acc.to_csv(class_acc_file)
 
     post_slack_file(predictions_file)
