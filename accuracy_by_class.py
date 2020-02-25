@@ -139,7 +139,7 @@ if __name__ == '__main__':
     post_slack_message(slack_message)
 
     # Set variables
-    data_dir = params.data_dir
+    data_dir = args.data_dir
     model_name = params.model_name
     batch_size = params.test_batch_size
     num_workers = params.num_workers
