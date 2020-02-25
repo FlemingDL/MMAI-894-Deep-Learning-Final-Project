@@ -200,6 +200,7 @@ if __name__ == '__main__':
     for inputs, labels in tqdm(val_data_loader):
         torch.no_grad()
         inputs = inputs.to(device)
+        labels = labels.to(device)
         outputs = model_ft(inputs)
         _, pred = torch.max(outputs, 1)
         c = (pred == labels).squeeze()
