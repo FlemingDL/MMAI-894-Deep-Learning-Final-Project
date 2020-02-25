@@ -1,4 +1,4 @@
-"""Test the model"""
+"""Get the accuracy of the best saved model"""
 import argparse
 import ssl
 import torch
@@ -116,6 +116,21 @@ def delete_slack_file(response):
 
 
 def plot_confusion_matrix(cm, class_names):
+    cmap = plt.get_cmap('Blues')
+
+    plt.figure(figsize=(8, 6))
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title('Confusion Matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(class_names))
+    plt.xticks(tick_marks, class_names, rotation=45)
+    plt.yticks(tick_marks, class_names)
+
+    # Normalize
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 1.5
+
     figure = plt.figure(figsize=(8, 8))
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
     plt.title("Confusion matrix")
@@ -127,11 +142,10 @@ def plot_confusion_matrix(cm, class_names):
     # Normalize the confusion matrix.
     cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
 
-    # Use white text if squares are dark; otherwise black.
-    threshold = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        color = "white" if cm[i, j] > threshold else "black"
-        plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
+        plt.text(j, i, "{:0.4f}".format(cm[i, j]),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
 
     plt.tight_layout()
     plt.ylabel('True label')
@@ -139,6 +153,7 @@ def plot_confusion_matrix(cm, class_names):
 
     image_file = os.path.join(args.model_dir, "confusion_matrix.png")
     plt.savefig(image_file)
+
     return image_file
 
 
@@ -165,7 +180,7 @@ if __name__ == '__main__':
         client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
 
     # Set the logger
-    utils.set_logger(os.path.join(args.model_dir, 'test.log'))
+    utils.set_logger(os.path.join(args.model_dir, 'acc_by_class.log'))
 
     slack_message = "*Calculating Accuracy by Class for {}*".format(args.model_dir)
     post_slack_message(slack_message)
@@ -197,10 +212,10 @@ if __name__ == '__main__':
     # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
 
-    # Create test image dataset
+    # Create validation image dataset
     val_data = datasets.ImageFolder(root=os.path.join(data_dir, 'val'), transform=data_transforms)
 
-    # Create test dataloaders
+    # Create validation dataloaders
     val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, num_workers=num_workers)
 
     # Set model to evaluate
