@@ -47,6 +47,9 @@ def input_size_of_model(model_name):
     elif model_name == "xception":
         input_size = 299
 
+    elif model_name == "fleming":
+        input_size = 224
+
     else:
         logging.info("Invalid model name, exiting...")
         exit()

@@ -19,6 +19,7 @@ import numpy as np
 from joke.jokes import *
 import markdown_strings as ms
 import models.xception as xception
+import models.fleming as fleming
 
 
 parser = argparse.ArgumentParser()
@@ -298,6 +299,13 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 299
+
+    elif model_name == "fleming":
+        """ Fleming Model
+        Custom model created by team Fleming
+        """
+        model_ft = fleming.FlemingModel(num_classes=196)
+        input_size = 224
 
     else:
         logging.info("Invalid model name, exiting...")
