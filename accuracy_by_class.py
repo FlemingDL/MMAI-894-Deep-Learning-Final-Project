@@ -139,7 +139,7 @@ if __name__ == '__main__':
     post_slack_message(slack_message)
 
     # Set variables
-    data_dir = "./data/"
+    data_dir = params.data_dir
     model_name = params.model_name
     batch_size = params.test_batch_size
     num_workers = params.num_workers
@@ -166,10 +166,10 @@ if __name__ == '__main__':
     model_ft = model_ft.to(device)
 
     # Create test image dataset
-    test_data = datasets.ImageFolder(root=os.path.join(data_dir, 'test'), transform=data_transforms)
+    val_data = datasets.ImageFolder(root=os.path.join(data_dir, 'val'), transform=data_transforms)
 
     # Create test dataloaders
-    test_data_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size, num_workers=num_workers)
+    val_data_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, num_workers=num_workers)
 
     # Set model to evaluate
     model_ft.eval()
@@ -182,7 +182,7 @@ if __name__ == '__main__':
 
     # Get the file names of images
     image_names = []
-    for index in test_data_loader.dataset.imgs:
+    for index in val_data_loader.dataset.imgs:
         image_names.append(Path(index[0]).stem)
 
     # Initialize lists
@@ -197,7 +197,7 @@ if __name__ == '__main__':
     logging.info('Predicting cars')
     since = time.time()
     img_name_index = 0
-    for inputs, labels in tqdm(test_data_loader):
+    for inputs, labels in tqdm(val_data_loader):
         torch.no_grad()
         inputs = inputs.to(device)
         outputs = model_ft(inputs)

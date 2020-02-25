@@ -4,7 +4,7 @@ This is team fleming's deep learning final.  Code is written for Python 3.
 ## Getting Started
 Clone this repository
 ```bash
-$ git clone https://github.com/FlemingDL/894_DeepLearning_final_project_v2.git
+$ git clone https://github.com/FlemingDL/MMAI-894-Deep-Learning-Final-Project.git
 ```
 Change into the 894_DeepLearning_final_project
 ```bash
