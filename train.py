@@ -21,7 +21,6 @@ import markdown_strings as ms
 import models.xception as xception
 import models.fleming as fleming
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
                     help="Directory containing the dataset")
@@ -68,19 +67,19 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
         epoch_start = time.time()
 
-        joke = ms.esc_format(chucknorris())
+        joke = ms.esc_format(icanhazdad())
         if epoch == 0:
-            epoch_status_message = 'Just getting started. Chuck is not here yet...' + joke
+            epoch_status_message = 'Just getting started. Chuck has a joke for you...' + joke
         else:
             ave_epoch_time = np.mean(epoch_time_elapsed)
             est_time_to_go = ave_epoch_time * (num_epochs - epoch) + ave_epoch_time
             epoch_status_message = '*Epoch {}/{}.*\n>' \
                                    'Est time to go {:.0f}m {:.0f}s\n' \
-                                   'Just wait until Chuck gets here...{}'.format(epoch + 1,
-                                                                                 num_epochs,
-                                                                                 est_time_to_go // 60,
-                                                                                 est_time_to_go % 60,
-                                                                                 joke)
+                                   'Chuck has a new joke for you...{}'.format(epoch + 1,
+                                                                              num_epochs,
+                                                                              est_time_to_go // 60,
+                                                                              est_time_to_go % 60,
+                                                                              joke)
 
         # update_slack_progress_bar(pbar, epoch, num_epochs)
         slack_epoch_status_response = post_slack_message(epoch_status_message,
