@@ -44,10 +44,11 @@ class LayerActivations:
 
 def create_image_plot(activations, file_name):
     num_of_channels = activations.shape[1]
-    fig = plt.figure(figsize=(20, 50))
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=0.8, hspace=0.2, wspace=0.2)
-    for i in range(num_of_channels):
-        ax = fig.add_subplot(12, 5, i + 1, xticks=[], yticks=[])
+    num_of_plots = min(25, num_of_channels)
+    fig = plt.figure(figsize=(7.5, 5))
+    # fig.subplots_adjust(left=0, right=1, bottom=0, top=0.8, hspace=0.2, wspace=0.2)
+    for i in range(num_of_plots):
+        ax = fig.add_subplot(5, 5, i + 1, xticks=[], yticks=[])
         ax.imshow(activations[0][i])
     image_file = os.path.join(args.model_dir, file_name + ".png")
     fig.savefig(image_file)
@@ -97,12 +98,13 @@ if __name__ == '__main__':
     layer = input_number('Enter the number of the layer to visualize (0 to num of layers): ')
 
     # View layer
-    print('Creating image...')
-    convolution_out = LayerActivations(model_ft.features, layer)
+    print('Creating first 23 images...')
+    # convolution_out = LayerActivations(model_ft.features, layer)
+    convolution_out = LayerActivations(model_ft, layer)
     output = model_ft(Variable(input_img))
     convolution_out.remove()
     activations = convolution_out.features
-    print(activations.shape[1])
+    print(activations.shape)
     vis_saved = create_image_plot(activations, 'vis_of_layer_{}'.format(layer))
 
     print('Done. Visualization saved to: {}'.format(vis_saved))
