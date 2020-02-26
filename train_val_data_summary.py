@@ -57,6 +57,7 @@ if __name__ == '__main__':
 
     # Set slack channel
     slack_channel = '#dl-model-progress'
+    # slack_channel = '#temp'
 
     if 'SLACK_API_TOKEN' in os.environ:
         # Setup slack messages to track progress
