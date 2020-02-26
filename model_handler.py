@@ -124,12 +124,25 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 299
 
-    elif model_name == "fleming":
+    elif model_name == "fleming_v1":
         """ Fleming Model
         Custom model created by team Fleming
         """
         model_ft = fleming.FlemingModel_v1(num_classes=196)
-        # model_ft = fleming.FlemingModel(num_classes=196)
+        input_size = 224
+
+    elif model_name == "fleming_v2":
+        """ Fleming Model
+        Custom model created by team Fleming
+        """
+        model_ft = fleming.FlemingModel_v2(num_classes=196)
+        input_size = 224
+
+    elif model_name == "fleming_v3":
+        """ Fleming Model
+        Custom model created by team Fleming
+        """
+        model_ft = fleming.FlemingModel_v3(num_classes=196)
         input_size = 224
 
     else:
