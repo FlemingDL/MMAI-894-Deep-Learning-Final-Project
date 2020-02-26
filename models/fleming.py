@@ -89,7 +89,7 @@ class FlemingModel_v2(nn.Module):
             nn.Linear(in_features=392, out_features=392),
             nn.ReLU())
         self.classifier3 = nn.Sequential(
-            nn.Linear(196, num_classes)
+            nn.Linear(392, num_classes)
         )
 
     def forward(self, x):
@@ -130,7 +130,7 @@ class FlemingModel_v3(nn.Module):
             nn.Linear(in_features=392, out_features=392),
             nn.ReLU())
         self.classifier3 = nn.Sequential(
-            nn.Linear(196, num_classes)
+            nn.Linear(392, num_classes)
         )
 
     def forward(self, x):
