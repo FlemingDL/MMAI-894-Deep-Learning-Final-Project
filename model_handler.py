@@ -33,7 +33,13 @@ def input_size_of_model(model_name):
     elif model_name == "xception":
         input_size = 299
 
-    elif model_name == "fleming":
+    elif model_name == "fleming_v1":
+        input_size = 224
+
+    elif model_name == "fleming_v2":
+        input_size = 224
+
+    elif model_name == "fleming_v3":
         input_size = 224
 
     else:

@@ -8,7 +8,7 @@ from torchvision import transforms
 from torch.autograd import Variable
 from PIL import Image
 import matplotlib.pyplot as plt
-import numpy as np
+from slack_manager import SlackManager
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image_path', default=os.path.join('data', 'test', 'no_label', '00109.jpg'),
@@ -18,15 +18,22 @@ parser.add_argument('--model_dir', default='experiments/base_model',
 
 
 def input_number(message):
-    while True:
+    # while True:
+    #     try:
+    #         user_input = int(input(message))
+    #     except ValueError:
+    #         print("Please enter an integer! Try again.")
+    #         continue
+    #     else:
+    #         return user_input
+    #         break
+    user_input = 0
+    while user_input < 1:
         try:
             user_input = int(input(message))
         except ValueError:
             print("Please enter an integer! Try again.")
-            continue
-        else:
-            return user_input
-            break
+    return user_input
 
 
 class LayerActivations:
@@ -56,6 +63,13 @@ def create_image_plot(activations, file_name):
 
 
 if __name__ == '__main__':
+
+    # Initialize slack reporting
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
+    if 'SLACK_API_TOKEN' in os.environ:
+        sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
+
     # Collect arguments from command-line options
     args = parser.parse_args()
 
@@ -95,16 +109,21 @@ if __name__ == '__main__':
     input_img = Variable(image_tensor)
     input_img = input_img.to(device)
 
-    layer = input_number('Enter the number of the layer to visualize (0 to num of layers): ')
+    layer = input_number('Enter the number of the layer to visualize (1 to num of layers): ')
 
     # View layer
-    print('Creating first 23 images...')
+    print('Creating first 25 images...')
     # convolution_out = LayerActivations(model_ft.features, layer)
-    convolution_out = LayerActivations(model_ft, layer)
+    convolution_out = LayerActivations(model_ft, layer - 1)
     output = model_ft(Variable(input_img))
     convolution_out.remove()
     activations = convolution_out.features
-    print(activations.shape)
-    vis_saved = create_image_plot(activations, 'vis_of_layer_{}'.format(layer))
+    # print(activations.shape)
+    vis_saved = create_image_plot(activations, 'visualization_of_layer_{}'.format(layer))
+
+    sm.post_slack_message('Here are the first 25 filters of *layer {}* for experiment *{}* '
+                          'using image {} in the train data set'
+                          .format(layer, args.model_dir, os.path.basename(img_path)))
+    sm.post_slack_file(vis_saved)
 
     print('Done. Visualization saved to: {}'.format(vis_saved))
