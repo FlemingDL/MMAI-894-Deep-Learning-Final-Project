@@ -12,6 +12,7 @@ from tqdm import tqdm
 from pathlib import Path
 import scipy.io as spio
 import time
+import model_handler as mh
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -20,48 +21,48 @@ parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
 
 
-def input_size_of_model(model_name):
-    input_size = 0
+# def input_size_of_model(model_name):
+#     input_size = 0
+#
+#     if model_name == "resnet":
+#         input_size = 224
+#
+#     elif model_name == "resnet152":
+#         input_size = 224
+#
+#     elif model_name == "alexnet":
+#         input_size = 224
+#
+#     elif model_name == "vgg":
+#         input_size = 224
+#
+#     elif model_name == "squeezenet":
+#         input_size = 224
+#
+#     elif model_name == "densenet":
+#         input_size = 224
+#
+#     elif model_name == "inception":
+#         input_size = 299
+#
+#     elif model_name == "xception":
+#         input_size = 299
+#
+#     elif model_name == "fleming":
+#         input_size = 224
+#
+#     else:
+#         logging.info("Invalid model name, exiting...")
+#         exit()
+#
+#     return input_size
 
-    if model_name == "resnet":
-        input_size = 224
 
-    elif model_name == "resnet152":
-        input_size = 224
-
-    elif model_name == "alexnet":
-        input_size = 224
-
-    elif model_name == "vgg":
-        input_size = 224
-
-    elif model_name == "squeezenet":
-        input_size = 224
-
-    elif model_name == "densenet":
-        input_size = 224
-
-    elif model_name == "inception":
-        input_size = 299
-
-    elif model_name == "xception":
-        input_size = 299
-
-    elif model_name == "fleming":
-        input_size = 224
-
-    else:
-        logging.info("Invalid model name, exiting...")
-        exit()
-
-    return input_size
-
-
-def load_checkpoint(filepath, device):
-    checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'), map_location=str(device))
-    torch.load
-    model = checkpoint['model']
-    return model
+# def load_checkpoint(filepath, device):
+#     checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'), map_location=str(device))
+#     torch.load
+#     model = checkpoint['model']
+#     return model
 
 
 def post_slack_message(message, response=None):
@@ -145,7 +146,7 @@ if __name__ == '__main__':
     num_workers = params.num_workers
 
     # Get the required input size of the network for resizing images
-    input_size = input_size_of_model(model_name)
+    input_size = mh.input_size_of_model(model_name)
 
     # Data augmentation and normalization for testing
     data_transforms = transforms.Compose([
@@ -160,7 +161,7 @@ if __name__ == '__main__':
 
     # Load the model
     logging.info('Loading saved model')
-    model_ft = load_checkpoint(filepath=args.model_dir, device=device)
+    model_ft = mh.load_checkpoint(filepath=args.model_dir, device=device)
 
     # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
