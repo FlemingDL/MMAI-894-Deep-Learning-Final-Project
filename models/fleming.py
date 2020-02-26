@@ -83,7 +83,7 @@ class FlemingModel_v2(nn.Module):
         )
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(6, 6))
         self.classifier1 = nn.Sequential(
-            nn.Linear(in_features=12 * 6 * 6, out_features=392),
+            nn.Linear(in_features=128 * 6 * 6, out_features=392),
             nn.ReLU())
         self.classifier2 = nn.Sequential(
             nn.Linear(in_features=392, out_features=392),
@@ -124,7 +124,7 @@ class FlemingModel_v3(nn.Module):
         )
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(6, 6))
         self.classifier1 = nn.Sequential(
-            nn.Linear(in_features=12 * 6 * 6, out_features=392),
+            nn.Linear(in_features=128 * 6 * 6, out_features=392),
             nn.ReLU())
         self.classifier2 = nn.Sequential(
             nn.Linear(in_features=392, out_features=392),
@@ -136,6 +136,7 @@ class FlemingModel_v3(nn.Module):
     def forward(self, x):
         x = self.features1(x)
         x = self.features2(x)
+        x = self.features3(x)
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
         x = self.classifier1(x)
