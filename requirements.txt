@@ -1,3 +1,4 @@
+Pillow
 markdown_strings
 axju-jokes
 matplotlib
