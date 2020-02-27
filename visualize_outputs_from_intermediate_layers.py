@@ -113,6 +113,7 @@ if __name__ == '__main__':
 
     layer_summary = open(os.path.join(vis_folder, 'layer_summary.txt'), 'w')
     for i, layer in enumerate(layers):
+        print('Working on layer {} of {}'.format(i, len(layers)-1))
         layer_summary.writelines('Layer {}\n'.format(i+1))
         layer_summary.writelines(str(layer))
         layer_summary.write('\n\n')
