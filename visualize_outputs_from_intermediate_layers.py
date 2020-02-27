@@ -128,7 +128,7 @@ if __name__ == '__main__':
     # zip files
     zip_file = shutil.make_archive(base_name=vis_folder, format='zip', root_dir=vis_folder)
 
-    sm.post_slack_message('Here are the first 25 filters of *layer {}* for experiment *{}* '
+    sm.post_slack_message('Here are the first 25 filters for each layer of experiment *{}* '
                           'using image {} in the train data set'
                           .format(layer, args.model_dir, os.path.basename(img_path)))
     sm.post_slack_file(zip_file)
