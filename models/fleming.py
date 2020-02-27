@@ -1,3 +1,9 @@
+"""Team fleming's custom CNN
+
+Load the model by specifying it in the params.json file in experiments
+
+"""
+
 import torch
 import torch.nn as nn
 

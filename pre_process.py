@@ -1,5 +1,5 @@
 """Split the cars dataset into train/val/test
-
+---
 The cars dataset comes in the following format:
     cars_train/
         00001.jpg
@@ -23,7 +23,7 @@ The cars dataset also provides bounding boxes around the cars the image.
 
 Example:
     python pre_process.py --model_dir <path to experiment folder that contains params.json>
-
+---
 """
 
 import argparse

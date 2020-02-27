@@ -1,5 +1,5 @@
 """Get the accuracy of the best saved model
-
+---
 Loads the checkpoint file, created during training, and finds the prediction accuracy of each class and the
 prediction for each vehicle in the validation set.  Predictions are outputted to csv files saved in the experiment
 folder.
@@ -9,7 +9,7 @@ Example:
 
     if you have a slack api token (check the channel setting in code):
     SLACK_API_TOKEN='place token here' python accuracy_by_class.py --model_dir <directory of experiment>
-
+---
 """
 import argparse
 import logging
@@ -37,9 +37,8 @@ parser.add_argument('--model_dir', default='experiments/base_model',
 if __name__ == '__main__':
 
     # Initialize slack reporting
-    # TODO: Switch back
-    sm = SlackManager(channel='#temp')
-    # sm = SlackManager(channel='#dl-model-progress')
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 

@@ -1,4 +1,6 @@
-"""Test the pretrained model against the test set provided by Stanford Cars Dataset.  The test data provided by
+"""Test the pretrained model against the test set provided by Stanford Cars Dataset.
+---
+The test data provided by
 Stanford Cars Dataset is not labeled. This code will make predictions on the test set using the pretrained model
 and output the results that are formatted for submission to Stanford.
 
@@ -7,7 +9,7 @@ Example:
 
     if you have a slack api token (check the channel setting in code):
     SLACK_API_TOKEN='place token here' python test.py --model_dir <directory of experiment with checkpoint file>
-
+---
 """
 import argparse
 import logging
@@ -34,9 +36,8 @@ parser.add_argument('--model_dir', default='experiments/base_model',
 if __name__ == '__main__':
 
     # Setup Slack
-    # TODO: Switch back
-    sm = SlackManager(channel='#temp')
-    # sm = SlackManager(channel='#dl-model-progress')
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 

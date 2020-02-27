@@ -1,7 +1,11 @@
 """ Creates a report of which files were used for training and for validation
-
+---
 Example:
     python train_val_data_summary.py
+
+    if you have a slack api token (check the channel setting in code):
+    SLACK_API_TOKEN='place token here' python train_val_data_summary.py
+---
 """
 import os
 
@@ -13,9 +17,8 @@ from slack_manager import SlackManager
 if __name__ == '__main__':
 
     # Setup slack
-    # TODO: Switch back
-    sm = SlackManager(channel='#temp')
-    # sm = SlackManager(channel='#dl-model-progress')
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 

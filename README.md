@@ -41,11 +41,11 @@ the same class are stored in folders of the same class name is because the torch
 called ImageFolder.  This class handles a lot of the work providing the images are in a structure where each directory 
 is a label.
 ```bash
-$ python preprocess.py
+$ python pre_process.py
 ```
 To run for a specific experiment:
  ```bash
-$ python preprocess.py --model_dir 'experiments/<directory name>'
+$ python pre_process.py --model_dir 'experiments/<directory name>'
 ```
 
 ### Train
@@ -69,5 +69,23 @@ $ python test.py --model_dir <new directory path>
 ```
 A file called 'submit_to_stanford_prediction.txt' will be produced in your experiment directory.  This file
 is formatted for submission. 
+
+After submitting to Stanford Cars Evaluation, the returned .mat file can be parsed with:
+```bash
+$ python parse_results_file.py --file_path <path of .mat file>
+```
+
+
+### Helper files
+To create a report of the files that were used for training and validation:
+```bash
+$ python train_val_data_summary.py
+```
+
+To create a visuals of the first 25 filters in each of the layer:
+```bash
+$ python visualize_outputs_from_intermediate_layers.py
+```
+
 
 When you're done working on the project, deactivate the virtual environment with `deactivate`.

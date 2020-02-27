@@ -1,5 +1,5 @@
 """Train and validate the model
-
+---
 Code leverages heavily from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
 
 The code will train for the specified number of epochs and after each epoch runs a full validation step.
@@ -16,7 +16,7 @@ Example:
 
     if you have a slack api token (check the channel setting in code):
     SLACK_API_TOKEN='place token here' python train.py --model_dir <directory of experiment>
-
+---
 """
 import argparse
 import copy
@@ -197,9 +197,8 @@ def create_line_graph_image(y1, y2, y1_name, y2_name, title):
 if __name__ == '__main__':
 
     # Setup slack
-    # TODO: Switch back
-    # sm = SlackManager(channel='#dl-model-progress')
-    sm = SlackManager(channel='#temp')
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 

@@ -1,8 +1,17 @@
 """Visualize the outputs from intermediate layers for trained models
-
+---
 Creates visualizations of the first 25 filters for each layer in the network.  Images for each layer and
 a text file for explaining the layers is saved in a visualizations folder and zipped
 
+Example:
+    python visualize_outputs_from_intermediate_layers.py --model_dir
+        <directory of experiment with checkpoint file> --image_path <path of image file to run through model>
+
+    if you have a slack api token (check the channel setting in code):
+    SLACK_API_TOKEN='place token here' python visualize_outputs_from_intermediate_layers.py --model_dir
+        <directory of experiment with checkpoint file> --image_path <path of image file to run through model>
+
+---
 """
 import argparse
 import os
@@ -69,9 +78,8 @@ def ensure_folder(folder):
 if __name__ == '__main__':
 
     # Initialize slack reporting
-    # TODO: Switch back
-    sm = SlackManager(channel='#temp')
-    # sm = SlackManager(channel='#dl-model-progress')
+    # sm = SlackManager(channel='#temp')
+    sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 
