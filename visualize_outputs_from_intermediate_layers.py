@@ -9,6 +9,7 @@ from torch.autograd import Variable
 from PIL import Image
 import matplotlib.pyplot as plt
 from slack_manager import SlackManager
+import shutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image_path', default=os.path.join('data', 'test', 'no_label', '00109.jpg'),
@@ -18,15 +19,6 @@ parser.add_argument('--model_dir', default='experiments/base_model',
 
 
 def input_number(message):
-    # while True:
-    #     try:
-    #         user_input = int(input(message))
-    #     except ValueError:
-    #         print("Please enter an integer! Try again.")
-    #         continue
-    #     else:
-    #         return user_input
-    #         break
     user_input = 0
     while user_input < 1:
         try:
@@ -57,9 +49,14 @@ def create_image_plot(activations, file_name):
     for i in range(num_of_plots):
         ax = fig.add_subplot(5, 5, i + 1, xticks=[], yticks=[])
         ax.imshow(activations[0][i])
-    image_file = os.path.join(args.model_dir, file_name + ".png")
+    image_file = os.path.join(args.model_dir, 'visualizations', file_name + ".png")
     fig.savefig(image_file)
     return image_file
+
+
+def ensure_folder(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 
 if __name__ == '__main__':
@@ -109,21 +106,31 @@ if __name__ == '__main__':
     input_img = Variable(image_tensor)
     input_img = input_img.to(device)
 
-    layer = input_number('Enter the number of the layer to visualize (1 to num of layers): ')
+    layers = list(model_ft.children())
 
-    # View layer
-    print('Creating first 25 images...')
-    # convolution_out = LayerActivations(model_ft.features, layer)
-    convolution_out = LayerActivations(model_ft, layer - 1)
-    output = model_ft(Variable(input_img))
-    convolution_out.remove()
-    activations = convolution_out.features
-    # print(activations.shape)
-    vis_saved = create_image_plot(activations, 'visualization_of_layer_{}'.format(layer))
+    vis_folder = os.path.join(args.model_dir, 'visualizations')
+    ensure_folder(vis_folder)
+
+    layer_summary = open(os.path.join(vis_folder, 'layer_summary.txt'), 'w')
+    for i, layer in enumerate(layers):
+        layer_summary.writelines('Layer {}\n'.format(i+1))
+        layer_summary.writelines(str(layer))
+        layer_summary.write('\n\n')
+        if i+1 != len(layers):
+            convolution_out = LayerActivations(model_ft, i)
+            output = model_ft(Variable(input_img))
+            convolution_out.remove()
+            activations = convolution_out.features
+            create_image_plot(activations, 'visualization_of_layer_{}'.format(i+1))
+
+    layer_summary.close()
+
+    # zip files
+    zip_file = shutil.make_archive(base_name=vis_folder, format='zip', root_dir=vis_folder)
 
     sm.post_slack_message('Here are the first 25 filters of *layer {}* for experiment *{}* '
                           'using image {} in the train data set'
                           .format(layer, args.model_dir, os.path.basename(img_path)))
-    sm.post_slack_file(vis_saved)
+    sm.post_slack_file(zip_file)
 
-    print('Done. Visualization saved to: {}'.format(vis_saved))
+    print('Done.')
