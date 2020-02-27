@@ -122,7 +122,8 @@ if __name__ == '__main__':
             output = model_ft(Variable(input_img))
             convolution_out.remove()
             activations = convolution_out.features
-            create_image_plot(activations, 'visualization_of_layer_{}'.format(i+1))
+            if activations is not None:
+                create_image_plot(activations, 'visualization_of_layer_{}'.format(i+1))
 
     layer_summary.close()
 
