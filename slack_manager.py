@@ -1,9 +1,23 @@
-import slack
 import logging
 import ssl
 
+import slack
+
 
 class SlackManager:
+    """Class that loads the slack api and makes it cleaner to post messages and files.
+
+    Example:
+    ```
+    sm = SlackManager(channel='#dl-model-progress')
+    if 'SLACK_API_TOKEN' in os.environ:
+        sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
+
+    sm.post_slack_message(message)
+    sm.post_slack_file(file)
+    ```
+    """
+
     client = None
     slack_channel = ""
 

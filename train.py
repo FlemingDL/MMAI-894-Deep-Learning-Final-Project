@@ -1,48 +1,50 @@
-"""Train the model"""
+"""Train and validate the model
+
+Code leverages heavily from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
+
+The code will train for the specified number of epochs and after each epoch runs a full validation step.
+It also keeps track of the best performing model (in terms of validation accuracy), and at the end of training
+saves the best performing model.
+
+Variables for the model is set in the params.json in the experiment folder.
+
+Available models are in model_handler.py
+Code supports two optimizers, SGD and Adam (learning rate, momentum and eps are in the params.json file)
+
+Example:
+    python train.py --model_dir <directory of experiment>
+
+    if you have a slack api token (check the channel setting in code):
+    SLACK_API_TOKEN='place token here' python train.py --model_dir <directory of experiment>
+
+"""
 import argparse
+import copy
+import logging
+import os
+import shutil
+import time
+
+import markdown_strings as ms
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import pandas as pd
-from torchvision import datasets, models, transforms
-import time
-import os
-import copy
-import logging
-import utils
-import ssl
-from tqdm import tqdm
-import slack
-import shutil
-import matplotlib.pyplot as plt
-import numpy as np
 from joke.jokes import *
-import markdown_strings as ms
-# import models.xception as xception
-# import models.fleming as fleming
+from torchvision import datasets, transforms
+from tqdm import tqdm
+
 import model_handler as mh
+import utils
+from slack_manager import SlackManager
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
                     help="Directory containing the dataset")
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
-
-"""
-From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-
-Model Training and Validation Code
-
-The train_model function handles the training and validation of a given model. As input, it takes a PyTorch model,
-a dictionary of dataloaders, a loss function, an optimizer, a specified number of epochs to train and validate for,
-and a boolean flag for when the model is an Inception model. The is_inception flag is used to accomodate the
-Inception v3 model, as that architecture uses an auxiliary output and the overall model loss respects both the
-auxiliary output and the final output, as described here:
-<https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958>__. The function
-trains for the specified number of epochs and after each epoch runs a full validation step. It also keeps track of
-the best performing model (in terms of validation accuracy), and at the end of training returns the best performing
-model. After each epoch, the training and validation accuracies are printed.
-"""
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_inception=False):
@@ -85,8 +87,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                                                                               joke)
 
         # update_slack_progress_bar(pbar, epoch, num_epochs)
-        slack_epoch_status_response = post_slack_message(epoch_status_message,
-                                                         slack_epoch_status_response)
+        slack_epoch_status_response = sm.post_slack_message(epoch_status_message,
+                                                            slack_epoch_status_response)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -114,7 +116,8 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
                     #   mode we calculate the loss by summing the final output and the auxiliary output
                     #   but in testing we only consider the final output.
                     if is_inception and phase == 'train':
-                        # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary-classifiers/7958
+                        # From https://discuss.pytorch.org/t/how-to-optimize-inception-model-with-auxiliary
+                        # -classifiers/7958
                         outputs, aux_outputs = model(inputs)
                         loss1 = criterion(outputs, labels)
                         loss2 = criterion(aux_outputs, labels)
@@ -154,14 +157,14 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
 
         # send graph every tenth epoch
         if epoch % 10 == 0 and epoch != 0:
-            slack_loss_img_response = post_slack_file(create_line_graph_image(train_loss_history, val_loss_history,
-                                                                              'train', 'validation',
-                                                                              'Loss Per Epoch'),
-                                                      slack_loss_img_response)
-            slack_acc_img_response = post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
-                                                                             'train', 'validation',
-                                                                             'Accuracy Per Epoch'),
-                                                     slack_acc_img_response)
+            slack_loss_img_response = sm.post_slack_file(create_line_graph_image(train_loss_history, val_loss_history,
+                                                                                 'train', 'validation',
+                                                                                 'Loss Per Epoch'),
+                                                         slack_loss_img_response)
+            slack_acc_img_response = sm.post_slack_file(create_line_graph_image(train_acc_history, val_acc_history,
+                                                                                'train', 'validation',
+                                                                                'Accuracy Per Epoch'),
+                                                        slack_acc_img_response)
 
         epoch_time_elapsed.append(time.time() - epoch_start)
 
@@ -171,196 +174,13 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     logging.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     logging.info('Best val Acc: {:4f}'.format(best_acc))
 
-    post_slack_message('Training complete in {:.0f}m {:.0f}s\n'
-                       'Best val Acc: {:4f}'.format(time_elapsed // 60, time_elapsed % 60, best_acc))
+    sm.post_slack_message('Training complete in {:.0f}m {:.0f}s\n'
+                          'Best val Acc: {:4f}'.format(time_elapsed // 60, time_elapsed % 60, best_acc))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
 
     return model, val_acc_history, val_loss_history, train_acc_history, train_loss_history
-
-
-# """
-# From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-#
-# Set Model Parameters’ .requires_grad attribute
-#
-# This helper function sets the .requires_grad attribute of the parameters in the model to False when we are feature
-# extracting. By default, when we load a pretrained model all of the parameters have .requires_grad=True, which is fine
-# if we are training from scratch or finetuning. However, if we are feature extracting and only want to compute
-# gradients for the newly initialized layer then we want all of the other parameters to not require gradients. This
-# will make more sense later.
-# """
-
-
-# def set_parameter_requires_grad(model, feature_extracting):
-#     if feature_extracting:
-#         for param in model.parameters():
-#             param.requires_grad = False
-
-
-# """
-# From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-#
-# Initialize and Reshape the Networks
-#
-# Now to the most interesting part. Here is where we handle the reshaping of each network. Note, this is not an
-# automatic procedure and is unique to each model. Recall, the final layer of a CNN model, which is often times an FC
-# layer, has the same number of nodes as the number of output classes in the dataset. Since all of the models have been
-# pretrained on Imagenet, they all have output layers of size 1000, one node for each class. The goal here is to
-# reshape the last layer to have the same number of inputs as before, AND to have the same number of outputs as the
-# number of classes in the dataset. In the following sections we will discuss how to alter the architecture of each
-# model individually. But first, there is one important detail regarding the difference between finetuning and
-# feature-extraction. When feature extracting, we only want to update the parameters of the last layer, or in other
-# words, we only want to update the parameters for the layer(s) we are reshaping. Therefore, we do not need to compute
-# the gradients of the parameters that we are not changing, so for efficiency we set the .requires_grad attribute to
-# False. This is important because by default, this attribute is set to True. Then, when we initialize the new layer
-# and by default the new parameters have .requires_grad=True so only the new layer’s parameters will be updated. When
-# we are finetuning we can leave all of the .required_grad’s set to the default of True. Finally, notice that
-# inception_v3 requires the input size to be (299,299), whereas all of the other models expect (224,224).
-# """
-#
-
-# def initialize_model(model_name, num_classes, feature_extract, use_pretrained=True):
-#     # Initialize these variables which will be set in this if statement. Each of these
-#     #   variables is model specific.
-#     model_ft = None
-#     input_size = 0
-#
-#     if model_name == "resnet":
-#         """ Resnet18
-#         """
-#         model_ft = models.resnet18(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.fc.in_features
-#         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-#         input_size = 224
-#
-#     elif model_name == "resnet152":
-#         model_ft = models.resnet152(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.fc.in_features
-#         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-#         input_size = 224
-#
-#     elif model_name == "alexnet":
-#         """ Alexnet
-#         """
-#         model_ft = models.alexnet(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.classifier[6].in_features
-#         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
-#         input_size = 224
-#
-#     elif model_name == "vgg":
-#         """ VGG11_bn
-#         """
-#         model_ft = models.vgg11_bn(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.classifier[6].in_features
-#         model_ft.classifier[6] = nn.Linear(num_ftrs, num_classes)
-#         input_size = 224
-#
-#     elif model_name == "squeezenet":
-#         """ Squeezenet
-#         """
-#         model_ft = models.squeezenet1_0(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         model_ft.classifier[1] = nn.Conv2d(512, num_classes, kernel_size=(1, 1), stride=(1, 1))
-#         model_ft.num_classes = num_classes
-#         input_size = 224
-#
-#     elif model_name == "densenet":
-#         """ Densenet
-#         """
-#         model_ft = models.densenet121(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.classifier.in_features
-#         model_ft.classifier = nn.Linear(num_ftrs, num_classes)
-#         input_size = 224
-#
-#     elif model_name == "inception":
-#         """ Inception v3
-#         Be careful, expects (299,299) sized images and has auxiliary output
-#         """
-#         model_ft = models.inception_v3(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         # Handle the auxilary net
-#         num_ftrs = model_ft.AuxLogits.fc.in_features
-#         model_ft.AuxLogits.fc = nn.Linear(num_ftrs, num_classes)
-#         # Handle the primary net
-#         num_ftrs = model_ft.fc.in_features
-#         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-#         input_size = 299
-#     elif model_name == "xception":
-#         """ Xception
-#         Be careful, expects (299,299) sized images and has auxiliary output
-#         """
-#         model_ft = xception.xception(pretrained=use_pretrained)
-#         set_parameter_requires_grad(model_ft, feature_extract)
-#         num_ftrs = model_ft.fc.in_features
-#         model_ft.fc = nn.Linear(num_ftrs, num_classes)
-#         input_size = 299
-#
-#     elif model_name == "fleming":
-#         """ Fleming Model
-#         Custom model created by team Fleming
-#         """
-#         model_ft = fleming.FlemingModel_v1(num_classes=196)
-#         # model_ft = fleming.FlemingModel(num_classes=196)
-#         input_size = 224
-#
-#     else:
-#         logging.info("Invalid model name, exiting...")
-#         exit()
-#
-#     return model_ft, input_size
-
-
-def post_slack_message(message, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.chat_postMessage(channel=slack_channel, text=message)
-            except:
-                logging.info('Error posting message to slack')
-        else:
-            try:
-                response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
-            except:
-                logging.info('Error posting message to slack')
-
-        return response
-
-
-def post_slack_file(file_name, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-        else:
-            delete_slack_file(response)
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-
-        return response
-
-
-def delete_slack_message(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        try:
-            client.chat_delete(channel=response['channel'], ts=response['ts'])
-        except:
-            logging.info('Error deleting message')
-
-
-def delete_slack_file(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        client.files_delete(file=response['file']['id'])
 
 
 def create_line_graph_image(y1, y2, y1_name, y2_name, title):
@@ -376,12 +196,12 @@ def create_line_graph_image(y1, y2, y1_name, y2_name, title):
 
 if __name__ == '__main__':
 
-    # Set slack channel
-    slack_channel = '#dl-model-progress'
-    # slack_channel = '#temp'
-
-    # Ignore ssl certification (prevent error for some users)
-    ssl._create_default_https_context = ssl._create_unverified_context
+    # Setup slack
+    # TODO: Switch back
+    # sm = SlackManager(channel='#dl-model-progress')
+    sm = SlackManager(channel='#temp')
+    if 'SLACK_API_TOKEN' in os.environ:
+        sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 
     # Collect arguments from command-line options
     args = parser.parse_args()
@@ -392,29 +212,14 @@ if __name__ == '__main__':
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path)
 
-    if 'SLACK_API_TOKEN' in os.environ:
-        # Setup slack messages to track progress
-        # client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'])
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'train.log'))
 
-    ######################################################################
-    # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-    # Variables set in experiment/base_model/params.json
-    # ---------
-    print('Setting variables...')
-    # Top level data directory. Here we assume the format of the directory conforms
-    #   to the ImageFolder structure
+    logging.info('Setting variables...')
+
     data_dir = "./data/"
 
-    # Models to choose from [resnet, alexnet, vgg, squeezenet, densenet, inception]
     model_name = params.model_name
-    # Optimizer selected.  Choose from [sgd, adam]
     optimizer_selected = params.optimizer
     learning_rate = params.learning_rate
     momentum = params.momentum
@@ -444,29 +249,14 @@ if __name__ == '__main__':
                                                                                   learning_rate, momentum, eps,
                                                                                   batch_size, num_epochs,
                                                                                   train_data_split, images_cropped)
-    post_slack_message(slack_message)
-
-    ######################################################################
-    # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-    # ---------
-
-    print('Initializing the model...')
+    sm.post_slack_message(slack_message)
 
     # Initialize the model for this run
+    logging.info('Initializing the model...')
     model_ft, input_size = mh.initialize_model(model_name, num_classes, feature_extract, use_pretrained=True)
+    logging.info('Model loaded.')
 
-    # print the model we just instantiated
-    print('Model loaded.')
-
-    # #####################################################################
-    # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-    # ---------
-    # Load Data
-    # Now that we know what the input size must be, we can initialize the data transforms, image datasets,
-    # and the dataloaders. Notice, the models were pretrained with the hard-coded normalization values, as described
-    # here <https://pytorch.org/docs/master/torchvision/models.html>__.
-
-    print('Load data...')
+    logging.info('Load data...')
     # Data augmentation and normalization for training
     # Just normalization for validation
     data_transforms = {
@@ -484,7 +274,7 @@ if __name__ == '__main__':
         ]),
     }
 
-    print("Initializing Datasets and Dataloaders...")
+    logging.info("Initializing Datasets and Dataloaders...")
 
     # Create training and validation datasets
     image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val']}
@@ -496,20 +286,7 @@ if __name__ == '__main__':
     # Detect if we have a GPU available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    # #####################################################################
-    # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-    # ---------
-    # Create the Optimizer
-    # Now that the model structure is correct, the final step for finetuning and feature extracting is to
-    # create an optimizer that only updates the desired parameters. Recall that after loading the pretrained model,
-    # but before reshaping, if feature_extract=True we manually set all of the parameter’s .requires_grad attributes
-    # to False. Then the reinitialized layer’s parameters have .requires_grad=True by default. So now we know that
-    # all parameters that have .requires_grad=True should be optimized. Next, we make a list of such parameters and
-    # input this list to the SGD algorithm constructor. To verify this, check out the printed parameters to learn.
-    # When finetuning, this list should be long and include all of the model parameters. However, when feature
-    # extracting this list should be short and only include the weights and biases of the reshaped layers.
-
-    print('Create the optimizer...')
+    logging.info('Create the optimizer...')
 
     # Send the model to device (GPU or CPU)
     model_ft = model_ft.to(device)
@@ -543,16 +320,7 @@ if __name__ == '__main__':
         logging.info("Invalid optimizer name, exiting...")
         exit()
 
-    # #####################################################################
-    # Code block taken from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
-    # ---------
-    # Run Training and Validation Step
-    # Finally, the last step is to setup the loss for the model, then run the training and validation function for
-    # the set number of epochs. Notice, depending on the number of epochs this step may take a while on a CPU. Also,
-    # the default learning rate is not optimal for all of the models, so to achieve maximum accuracy it would be
-    # necessary to tune for each model separately.
-
-    print('Running training and validation step...')
+    logging.info('Running training and validation step...')
 
     # Setup the loss fxn
     criterion = nn.CrossEntropyLoss()
@@ -595,7 +363,7 @@ if __name__ == '__main__':
     zip_file = shutil.make_archive(base_name=args.model_dir, format='zip', root_dir=args.model_dir)
 
     # post final validation accuracies to slack
-    post_slack_message('Here are the training results for the experiment:')
-    post_slack_file(zip_file)
+    sm.post_slack_message('Here are the training results for the experiment:')
+    sm.post_slack_file(zip_file)
 
-    print('Training complete.')
+    logging.info('Training complete.')

@@ -1,9 +1,28 @@
-import torch
+""" Common functions needed for model loading and input size determination
+
+Code leverages heavily from From https://pytorch.org/tutorials/beginner/finetuning_torchvision_models_tutorial.html
+
+Models to choose from:
+    resnet (Resnet18), resnet152, alexnet, vgg (VGG11_bn), squeezenet,
+    densenet, inception (Inception V3), xception, fleming_v1, fleming_v2, fleming_v3
+
+The models fleming_v1, fleming_v2, and fleming_v3 are custom Team Fleming models.  The model architecture is
+in 'models/fleming.py'
+
+Example:
+    import model_handler as mh
+
+"""
+
 import os
-from torchvision import models
+import ssl
+
+import torch
 import torch.nn as nn
-import models.xception as xception
+from torchvision import models
+
 import models.fleming as fleming
+import models.xception as xception
 
 
 def input_size_of_model(model_name):
@@ -54,6 +73,9 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
     #   variables is model specific.
     model_ft = None
     input_size = 0
+
+    # Ignore ssl certification (prevent error for some users)
+    ssl._create_default_https_context = ssl._create_unverified_context
 
     if model_name == "resnet":
         """ Resnet18

@@ -1,20 +1,32 @@
-"""Get the accuracy of the best saved model"""
+"""Get the accuracy of the best saved model
+
+Loads the checkpoint file, created during training, and finds the prediction accuracy of each class and the
+prediction for each vehicle in the validation set.  Predictions are outputted to csv files saved in the experiment
+folder.
+
+Example:
+    python accuracy_by_class.py --model_dir <directory of experiment>
+
+    if you have a slack api token (check the channel setting in code):
+    SLACK_API_TOKEN='place token here' python accuracy_by_class.py --model_dir <directory of experiment>
+
+"""
 import argparse
-import ssl
-import torch
-import slack
-import os
-import utils
-from torchvision import transforms, datasets
-import pandas as pd
-import numpy as np
 import logging
-from tqdm import tqdm
-from pathlib import Path
-import scipy.io as spio
+import os
 import time
 from operator import truediv
+from pathlib import Path
+
+import pandas as pd
+import scipy.io as spio
+import torch
+from torchvision import transforms, datasets
+from tqdm import tqdm
+
 import model_handler as mh
+import utils
+from slack_manager import SlackManager
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data',
@@ -22,102 +34,14 @@ parser.add_argument('--data_dir', default='data',
 parser.add_argument('--model_dir', default='experiments/base_model',
                     help="Directory containing params.json")
 
-
-# def input_size_of_model(model_name):
-#     input_size = 0
-#
-#     if model_name == "resnet":
-#         input_size = 224
-#
-#     elif model_name == "resnet152":
-#         input_size = 224
-#
-#     elif model_name == "alexnet":
-#         input_size = 224
-#
-#     elif model_name == "vgg":
-#         input_size = 224
-#
-#     elif model_name == "squeezenet":
-#         input_size = 224
-#
-#     elif model_name == "densenet":
-#         input_size = 224
-#
-#     elif model_name == "inception":
-#         input_size = 299
-#
-#     elif model_name == "xception":
-#         input_size = 299
-#
-#     elif model_name == "fleming":
-#         input_size = 224
-#
-#     else:
-#         logging.info("Invalid model name, exiting...")
-#         exit()
-#
-#     return input_size
-
-
-# def load_checkpoint(filepath, device):
-#     checkpoint = torch.load(os.path.join(filepath, 'checkpoint.pt'), map_location=str(device))
-#     torch.load
-#     model = checkpoint['model']
-#     return model
-
-
-def post_slack_message(message, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.chat_postMessage(channel=slack_channel, text=message)
-            except:
-                logging.info('Error posting message to slack')
-        else:
-            try:
-                response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
-            except:
-                logging.info('Error posting message to slack')
-
-        return response
-
-
-def post_slack_file(file_name, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-        else:
-            delete_slack_file(response)
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-
-        return response
-
-
-def delete_slack_message(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        try:
-            client.chat_delete(channel=response['channel'], ts=response['ts'])
-        except:
-            logging.info('Error deleting message')
-
-
-def delete_slack_file(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        client.files_delete(file=response['file']['id'])
-
-
 if __name__ == '__main__':
 
-    # Set slack channel
-    slack_channel = '#dl-model-progress'
-    # slack_channel = '#temp'
+    # Initialize slack reporting
+    # TODO: Switch back
+    sm = SlackManager(channel='#temp')
+    # sm = SlackManager(channel='#dl-model-progress')
+    if 'SLACK_API_TOKEN' in os.environ:
+        sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 
     # Collect arguments from command-line options
     args = parser.parse_args()
@@ -128,20 +52,13 @@ if __name__ == '__main__':
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path)
 
-    if 'SLACK_API_TOKEN' in os.environ:
-        # Setup slack messages to track progress
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
-
     # Set the logger
     utils.set_logger(os.path.join(args.model_dir, 'acc_by_class.log'))
 
     slack_message = "*Producing Predictions Data Dump*\n>" \
                     "Creating data files for predictions and " \
                     "labels on the validation set for {}".format(args.model_dir)
-    post_slack_message(slack_message)
+    sm.post_slack_message(slack_message)
 
     # Set variables
     data_dir = args.data_dir
@@ -225,7 +142,6 @@ if __name__ == '__main__':
     time_elapsed = time.time() - since
     message = 'Prediction complete in {:.0f}s on device:{}'.format(time_elapsed, str(device))
     logging.info(message)
-    # post_slack_message(message)
 
     # save the predictions
     predictions_file = os.path.join(args.model_dir, 'predictions.csv')
@@ -245,6 +161,6 @@ if __name__ == '__main__':
     df.to_csv(predictions_file, index=None)
     df_acc.to_csv(class_acc_file)
 
-    post_slack_file(predictions_file)
-    post_slack_file(class_acc_file)
+    sm.post_slack_file(predictions_file)
+    sm.post_slack_file(class_acc_file)
     logging.info('Done!')

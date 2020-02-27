@@ -10,26 +10,33 @@ The cars dataset comes in the following format:
         00002.jpg
         ...
 
-The Stanford Cars Dataset already provides a test set, so we only need to split "cars_train" into training (train)
-and validation (val) sets.
+The Stanford Cars Dataset "cars_train" data needs to be split into training (train) and validation (val) sets.  The
+"cars_test" data has no labels.  The provided test set is for submitting predictions to the Stanford Cars database
+to determine the accuracy of the model (you can only supply one text file every 24 hours).
+
+Further image preprocessing, such as resizing, cropping and normalization is done in the train.py and test.py
 
 The ImageFolder class provided by pytorch handles the class label of each image, providing the images are in a
 structure where each each image is saved in a folder where the folder name is the label of the images in that folder.
 
-The cars dataset also provides bounding boxes around the cars the image.  The following code defaults to cropping
-the images to the bounding box.
+The cars dataset also provides bounding boxes around the cars the image.
+
+Example:
+    python pre_process.py --model_dir <path to experiment folder that contains params.json>
+
 """
 
 import argparse
-import os
-import tarfile
-import scipy.io
-import numpy as np
-import random
-from tqdm import tqdm
-import cv2 as cv
-import shutil
 import logging
+import os
+import random
+import shutil
+import tarfile
+
+import cv2 as cv
+import numpy as np
+import scipy.io
+from tqdm import tqdm
 
 import utils
 

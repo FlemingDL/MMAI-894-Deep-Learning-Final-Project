@@ -1,10 +1,15 @@
 """Download the Cars Dataset from https://ai.stanford.edu/~jkrause/cars/car_dataset.html
 
-The Cars Dataset comes a training set 'cars_train.tgz', a test set 'cars_test.tgz', and
+The Cars Dataset comes as a training set 'cars_train.tgz', a test set 'cars_test.tgz', and
 a devkit that includes class labels for training images and bounding boxes for all images.
+
+Example:
+    python download_data.py
+
 """
 
 import ssl
+
 import wget
 
 # Run the following when run as the main module

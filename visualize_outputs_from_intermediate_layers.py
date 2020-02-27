@@ -1,15 +1,22 @@
-'''Visualize the outputs from intermediate layers for trained models'''
+"""Visualize the outputs from intermediate layers for trained models
+
+Creates visualizations of the first 25 filters for each layer in the network.  Images for each layer and
+a text file for explaining the layers is saved in a visualizations folder and zipped
+
+"""
 import argparse
 import os
-import utils
-import model_handler as mh
-import torch
-from torchvision import transforms
-from torch.autograd import Variable
-from PIL import Image
-import matplotlib.pyplot as plt
-from slack_manager import SlackManager
 import shutil
+
+import matplotlib.pyplot as plt
+import torch
+from PIL import Image
+from torch.autograd import Variable
+from torchvision import transforms
+
+import model_handler as mh
+import utils
+from slack_manager import SlackManager
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image_path', default=os.path.join('data', 'test', 'no_label', '00109.jpg'),
@@ -62,8 +69,9 @@ def ensure_folder(folder):
 if __name__ == '__main__':
 
     # Initialize slack reporting
-    # sm = SlackManager(channel='#temp')
-    sm = SlackManager(channel='#dl-model-progress')
+    # TODO: Switch back
+    sm = SlackManager(channel='#temp')
+    # sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
         sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 

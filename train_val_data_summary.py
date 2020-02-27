@@ -1,70 +1,23 @@
-''' Create a report of which files were used for training and for validation'''
+""" Creates a report of which files were used for training and for validation
+
+Example:
+    python train_val_data_summary.py
+"""
 import os
-import scipy.io as spio
+
 import pandas as pd
-import ssl
-import slack
-import logging
+import scipy.io as spio
 
-
-def post_slack_message(message, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.chat_postMessage(channel=slack_channel, text=message)
-            except:
-                logging.info('Error posting message to slack')
-        else:
-            try:
-                response = client.chat_update(channel=response['channel'], ts=response['ts'], text=message)
-            except:
-                logging.info('Error posting message to slack')
-
-        return response
-
-
-def post_slack_file(file_name, response=None):
-    if 'SLACK_API_TOKEN' in os.environ:
-        if response is None:
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-        else:
-            delete_slack_file(response)
-            try:
-                response = client.files_upload(channels=slack_channel, file=file_name, filename=file_name)
-            except:
-                logging.info('Error uploading file to slack')
-
-        return response
-
-
-def delete_slack_message(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        try:
-            client.chat_delete(channel=response['channel'], ts=response['ts'])
-        except:
-            logging.info('Error deleting message')
-
-
-def delete_slack_file(response):
-    if 'SLACK_API_TOKEN' in os.environ:
-        client.files_delete(file=response['file']['id'])
-
+from slack_manager import SlackManager
 
 if __name__ == '__main__':
 
-    # Set slack channel
-    slack_channel = '#dl-model-progress'
-    # slack_channel = '#temp'
-
+    # Setup slack
+    # TODO: Switch back
+    sm = SlackManager(channel='#temp')
+    # sm = SlackManager(channel='#dl-model-progress')
     if 'SLACK_API_TOKEN' in os.environ:
-        # Setup slack messages to track progress
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        client = slack.WebClient(token=os.environ['SLACK_API_TOKEN'], ssl=ssl_context)
+        sm.setup(slack_api_token=os.environ['SLACK_API_TOKEN'])
 
     # Get the car name lookup table
     devkit = 'devkit'
@@ -99,7 +52,7 @@ if __name__ == '__main__':
     df.to_csv(train_val_data_summary_file, index=None)
 
     slack_message = "*Data Summary Report of Train and Validation Data Used to Create All Models*"
-    post_slack_message(slack_message)
-    post_slack_file(train_val_data_summary_file)
+    sm.post_slack_message(slack_message)
+    sm.post_slack_file(train_val_data_summary_file)
 
     print('Done Exporting')
