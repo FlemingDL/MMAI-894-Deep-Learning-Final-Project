@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     sm.post_slack_message('Here are the first 25 filters for each layer of experiment *{}* '
                           'using image {} in the train data set'
-                          .format(layer, args.model_dir, os.path.basename(img_path)))
+                          .format(args.model_dir, os.path.basename(img_path)))
     sm.post_slack_file(zip_file)
 
     print('Done.')
