@@ -2,7 +2,6 @@
 This is team fleming's deep learning final.  Code is written for Python 3.
 
 ## Getting Started
-Clone this repository
 ```bash
 $ git clone https://github.com/FlemingDL/MMAI-894-Deep-Learning-Final-Project.git
 ```
@@ -48,7 +47,7 @@ To run for a specific experiment:
 $ python pre_process.py --model_dir 'experiments/<directory name>'
 ```
 
-### Train
+## Training
 The default experiment is in './experiments/base_model'.  In this folder is a set of training parameters in
 'params.json'.  To run this experiment, run: 
 ```bash
@@ -62,7 +61,7 @@ $ python train.py --model_dir <new directory path>
 ```
 
 
-### Test
+## Testing For Submission
 To create a submission file to the Stanford Cars 196 Submission Site, run:
 ```bash
 $ python test.py --model_dir <new directory path>
@@ -76,7 +75,7 @@ $ python parse_results_file.py --file_path <path of .mat file>
 ```
 
 
-### Helper files
+## Helper Files
 To create a report of the files that were used for training and validation:
 ```bash
 $ python train_val_data_summary.py
@@ -122,4 +121,5 @@ In order to run, you need to have first ran predictions_and_accuracy.py for each
 
 This code has been hardwired for models in experiments/inception_model_sgd and experiments/resnet_model_sgd
 
+## Deactivate Virtual Environment
 When you're done working on the project, deactivate the virtual environment with `deactivate`.
