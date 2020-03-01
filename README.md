@@ -93,5 +93,33 @@ To create a visuals of the first 25 filters in each of the layer:
 $ python visualize_outputs_from_intermediate_layers.py
 ```
 
+To view the images where the predictions for resnet/sgd and inception/sgd in experiments were incorrect, run:
+```bash
+$ python view_predictions.py
+```
+This will create a folder called 'results' and three sub-folders called 'both-incorrect' (both inception and resnet got
+it wrong), 'only-inception-incorrect' (only inception got it wrong) and 'only-resnet-incorrect' (only resnet got it 
+wrong). Within each of these subfolder will be series of folders with the following structure:
+```bash
+├── class-104-file-2199
+│   ├── 02199.jpg
+│   ├── incep-predicted_class-103-train_data
+│   │   ├── 00262.jpg
+│   │   ├── 00731.jpg
+│   │   ├── ...
+│   ├── original.jpg
+│   └── resnet-predicted_class-103-train_data
+│       ├── 00262.jpg
+│       ├── 00731.jpg
+│       ├── 00784.jpg
+│       ├── ...
+```
+'class-104-file-2199' refers to class 104 and file name 02199.jpeg.  In this folder is the original image and the
+transformed image.  The sub folder 'incep-predicted_class-103-train_data' refers to inception predicted class 103 and
+within the folder are transformed images used for training.
+
+In order to run, you need to have first ran predictions_and_accuracy.py for each model and train_val_data_summary.py
+
+This code has been hardwired for models in experiments/inception_model_sgd and experiments/resnet_model_sgd
 
 When you're done working on the project, deactivate the virtual environment with `deactivate`.
