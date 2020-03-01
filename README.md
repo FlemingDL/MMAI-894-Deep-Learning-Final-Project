@@ -82,6 +82,12 @@ To create a report of the files that were used for training and validation:
 $ python train_val_data_summary.py
 ```
 
+To output a file of the prediction made for each image in the validation set and file showing
+the accuracy for each class:
+```bash
+$ python predictions_and_accuracy.py --model_dir <directory of experiment>
+```
+
 To create a visuals of the first 25 filters in each of the layer:
 ```bash
 $ python visualize_outputs_from_intermediate_layers.py

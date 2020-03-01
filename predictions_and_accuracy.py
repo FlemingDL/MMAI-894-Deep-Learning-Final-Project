@@ -1,14 +1,14 @@
-"""Get the accuracy of the best saved model
+"""Get the predictions and accuracy of the best saved model
 ---
 Loads the checkpoint file, created during training, and finds the prediction accuracy of each class and the
 prediction for each vehicle in the validation set.  Predictions are outputted to csv files saved in the experiment
 folder.
 
 Example:
-    python accuracy_by_class.py --model_dir <directory of experiment>
+    python predictions_and_accuracy.py --model_dir <directory of experiment>
 
     if you have a slack api token (check the channel setting in code):
-    SLACK_API_TOKEN='place token here' python accuracy_by_class.py --model_dir <directory of experiment>
+    SLACK_API_TOKEN='place token here' python predictions_and_accuracy.py --model_dir <directory of experiment>
 ---
 """
 import argparse
@@ -18,6 +18,7 @@ import time
 from operator import truediv
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import scipy.io as spio
 import torch
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     params = utils.Params(json_path)
 
     # Set the logger
-    utils.set_logger(os.path.join(args.model_dir, 'acc_by_class.log'))
+    utils.set_logger(os.path.join(args.model_dir, 'predictions_and_accuracy.log'))
 
     slack_message = "*Producing Predictions Data Dump*\n>" \
                     "Creating data files for predictions and " \
@@ -156,8 +157,12 @@ if __name__ == '__main__':
     df_acc = pd.DataFrame()
     df_acc['class_names'] = cars_classid_to_name['name']
     df_acc['accuracy'] = list(map(truediv, class_correct, class_total))
+    df_acc.index.name = 'class_id'
+    # df_acc['class_id'] = np.arange(1, len(df_acc)+1)
+    df_acc.index = np.arange(1, len(df_acc) + 1)
 
     df.to_csv(predictions_file, index=None)
+    # df_acc.to_csv(class_acc_file, index=None)
     df_acc.to_csv(class_acc_file)
 
     sm.post_slack_file(predictions_file)
